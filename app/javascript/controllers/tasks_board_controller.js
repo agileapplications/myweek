@@ -8,7 +8,8 @@ export default class extends Controller {
     "descriptionInput",
     "bigCheckbox",
     "error",
-    "contextMenu"
+    "contextMenu",
+    "contextUnplan"
   ]
 
   dragStart(event) {
@@ -581,6 +582,7 @@ export default class extends Controller {
     }
 
     const taskElement = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+    const previousPlanned = taskElement?.dataset.taskPlanned || null
     if (taskElement) {
       taskElement.classList.remove("hidden")
       taskElement.dataset.taskPlanned = plannedValue
@@ -593,7 +595,7 @@ export default class extends Controller {
     }
 
     this.upsertPlannedCard(taskId, plannedValue)
-    this.updatePlanned(taskId, plannedValue)
+    this.updatePlanned(taskId, plannedValue, previousPlanned)
   }
 
   upsertPlannedCard(taskId, plannedValue) {
@@ -604,6 +606,7 @@ export default class extends Controller {
 
     let card = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
     if (card) {
+      card.dataset.taskPlanned = plannedValue
       container.appendChild(card)
       return
     }
@@ -628,7 +631,7 @@ export default class extends Controller {
     return card
   }
 
-  updatePlanned(taskId, plannedValue) {
+  updatePlanned(taskId, plannedValue, previousPlanned = null) {
     const token = document.querySelector("meta[name='csrf-token']").content
     fetch(`/tasks/${taskId}`, {
       method: "PATCH",
@@ -643,14 +646,38 @@ export default class extends Controller {
     }).catch(() => {
       const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
       if (backlogCard) {
-        backlogCard.dataset.taskPlanned = ""
-        this.setBacklogPlannedStyles(backlogCard, false)
+        if (previousPlanned) {
+          backlogCard.dataset.taskPlanned = previousPlanned
+          this.setBacklogPlannedStyles(backlogCard, true)
+        } else {
+          backlogCard.dataset.taskPlanned = ""
+          this.setBacklogPlannedStyles(backlogCard, false)
+        }
       }
       const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
       if (plannedCard) {
-        plannedCard.remove()
+        if (previousPlanned) {
+          this.upsertPlannedCard(taskId, previousPlanned)
+        } else {
+          plannedCard.remove()
+        }
       }
     })
+  }
+
+  unplanCard(card) {
+    const taskId = card.dataset.taskId
+    const previousPlanned = card.dataset.taskPlanned || null
+    const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+    if (backlogCard) {
+      backlogCard.dataset.taskPlanned = ""
+      this.setBacklogPlannedStyles(backlogCard, false)
+    }
+    const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
+    if (plannedCard) {
+      plannedCard.remove()
+    }
+    this.updatePlanned(taskId, null, previousPlanned)
   }
 
   setBacklogPlannedStyles(card, planned) {
@@ -679,6 +706,14 @@ export default class extends Controller {
     if (this.draggedElement) return
     this.contextCard = event.currentTarget
     this.closeContextMenu()
+    if (this.hasContextUnplanTarget) {
+      const planned = this.contextCard?.dataset.taskPlanned
+      if (planned) {
+        this.contextUnplanTarget.classList.remove("hidden")
+      } else {
+        this.contextUnplanTarget.classList.add("hidden")
+      }
+    }
     const menu = this.contextMenuTarget
     menu.style.left = `${event.clientX + 8}px`
     menu.style.top = `${event.clientY + 8}px`
@@ -709,6 +744,15 @@ export default class extends Controller {
     } else {
       this.archiveHoveredCard()
     }
+    this.contextCard = null
+  }
+
+  contextUnplan(event) {
+    event.preventDefault()
+    const card = this.contextCard
+    this.closeContextMenu()
+    if (!card) return
+    this.unplanCard(card)
     this.contextCard = null
   }
 

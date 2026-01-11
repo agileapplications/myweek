@@ -33,6 +33,7 @@
                 data-task-title="<%= task.title %>"
                 data-task-description="<%= task.description.to_s %>"
                 data-task-big="<%= task.big? %>"
+                data-task-planned="<%= task.planned.to_s %>"
                 data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard click->tasks-board#openEditFromClick contextmenu->tasks-board#openContextMenu">
                 <div class="flex items-center justify-between gap-2">
                   <span class="task-title <%= task.big? ? "task-title--big" : "" %>"><%= task.title %></span>
@@ -170,6 +171,12 @@
         class="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
         data-action="click->tasks-board#contextEdit">
         Edit
+      </button>
+      <button type="button"
+        class="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+        data-tasks-board-target="contextUnplan"
+        data-action="click->tasks-board#contextUnplan">
+        Unplan
       </button>
       <button type="button"
         class="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
