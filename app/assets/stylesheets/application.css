@@ -17,11 +17,16 @@
 
 .task-title--big {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   white-space: normal;
 }
 
 .task-card--big {
-  min-height: 3.25rem;
+  min-height: 5rem;
+}
+
+.task-card--planned {
+  background-color: #ecfdf5;
+  border-color: #bbf7d0;
 }

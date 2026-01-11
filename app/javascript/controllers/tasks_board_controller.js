@@ -18,6 +18,7 @@ export default class extends Controller {
     this.draggedNextSibling = event.currentTarget.nextElementSibling
     this.draggedParent = event.currentTarget.parentElement
     this.dropHandled = false
+    this.draggedCardType = event.currentTarget.dataset.cardType
 
     setTimeout(() => {
       if (this.draggedElement) {
@@ -30,7 +31,12 @@ export default class extends Controller {
     this.clearPlaceholders()
     if (this.draggedElement) {
       this.draggedElement.classList.remove("hidden")
-      if (!this.dropHandled && this.draggedParent && this.draggedElement.parentElement !== this.draggedParent) {
+      if (
+        !this.dropHandled &&
+        this.draggedParent &&
+        this.draggedCardType === "backlog" &&
+        this.draggedElement.parentElement !== this.draggedParent
+      ) {
         if (this.draggedNextSibling && this.draggedNextSibling.parentElement === this.draggedParent) {
           this.draggedParent.insertBefore(this.draggedElement, this.draggedNextSibling)
         } else {
@@ -42,6 +48,7 @@ export default class extends Controller {
     this.draggedNextSibling = null
     this.draggedParent = null
     this.dropHandled = false
+    this.draggedCardType = null
   }
 
   hoverCard(event) {
@@ -176,6 +183,21 @@ export default class extends Controller {
   }
 
   applyCardUpdate(card, title, description, isBig) {
+    const taskId = card.dataset.taskId
+    const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+    const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
+
+    if (backlogCard) {
+      const plannedAccent = !!backlogCard.dataset.taskPlanned
+      this.updateCardContent(backlogCard, title, description, isBig, plannedAccent)
+    }
+
+    if (plannedCard) {
+      this.updateCardContent(plannedCard, title, description, isBig, false)
+    }
+  }
+
+  updateCardContent(card, title, description, isBig, plannedAccent = false) {
     card.dataset.taskTitle = title
     card.dataset.taskDescription = description || ""
     card.dataset.taskBig = isBig
@@ -186,7 +208,7 @@ export default class extends Controller {
     }
 
     this.syncBigStyles(card, isBig)
-    this.syncDescriptionIcon(card, description)
+    this.syncDescriptionIcon(card, description, plannedAccent)
   }
 
   insertNewCard(data) {
@@ -204,14 +226,19 @@ export default class extends Controller {
     const card = document.createElement("div")
     card.className = "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing"
     card.setAttribute("draggable", "true")
+    card.dataset.cardType = "backlog"
     card.dataset.taskId = data.id
     card.dataset.taskListId = data.task_list_id
     card.dataset.taskTitle = data.title
     card.dataset.taskDescription = data.description || ""
     card.dataset.taskBig = data.big
+    card.dataset.taskPlanned = data.planned || ""
     card.dataset.action = "dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard"
     if (data.big) {
       card.classList.add("task-card--big")
+    }
+    if (data.planned) {
+      this.setBacklogPlannedStyles(card, true)
     }
 
     const wrapper = document.createElement("div")
@@ -223,16 +250,16 @@ export default class extends Controller {
 
     wrapper.appendChild(titleSpan)
     if (data.description) {
-      wrapper.appendChild(this.buildDescriptionIcon())
+      wrapper.appendChild(this.buildDescriptionIcon(!!data.planned))
     }
 
     card.appendChild(wrapper)
     return card
   }
 
-  buildDescriptionIcon() {
+  buildDescriptionIcon(plannedCard = false) {
     const icon = document.createElement("span")
-    icon.className = "text-slate-400"
+    icon.className = plannedCard ? "text-emerald-400" : "text-slate-400"
     icon.setAttribute("aria-label", "Has description")
     icon.innerHTML = `
       <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
@@ -242,14 +269,34 @@ export default class extends Controller {
     return icon
   }
 
-  syncDescriptionIcon(card, description) {
+  syncDescriptionIcon(card, description, plannedAccent = false) {
     const wrapper = card.firstElementChild
     if (!wrapper) return
     const existingIcon = wrapper.querySelector("span.text-slate-400")
-    if (description && !existingIcon) {
-      wrapper.appendChild(this.buildDescriptionIcon())
-    } else if (!description && existingIcon) {
-      existingIcon.remove()
+    const existingPlannedIcon = wrapper.querySelector("span.text-emerald-400")
+
+    if (description && !existingIcon && !existingPlannedIcon) {
+      wrapper.appendChild(this.buildDescriptionIcon(plannedAccent))
+      return
+    }
+
+    if (!description) {
+      if (existingIcon) existingIcon.remove()
+      if (existingPlannedIcon) existingPlannedIcon.remove()
+      return
+    }
+
+    if (description) {
+      const icon = existingIcon || existingPlannedIcon
+      if (icon) {
+        if (plannedAccent) {
+          icon.classList.remove("text-slate-400")
+          icon.classList.add("text-emerald-400")
+        } else {
+          icon.classList.remove("text-emerald-400")
+          icon.classList.add("text-slate-400")
+        }
+      }
     }
   }
 
@@ -292,6 +339,10 @@ export default class extends Controller {
     }).then((response) => {
       if (!response.ok) throw new Error("Failed to archive task")
       card.remove()
+      const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
+      if (plannedCard) {
+        plannedCard.remove()
+      }
       this.hoveredCard = null
     }).catch(() => {
       card.classList.remove("hidden")
@@ -346,6 +397,10 @@ export default class extends Controller {
 
     const taskElement = this.element.querySelector(`[data-task-id="${taskId}"]`)
     if (!taskElement) return
+    if (this.draggedCardType !== "backlog") {
+      taskElement.classList.remove("hidden")
+      return
+    }
 
     const previousListId = taskElement.dataset.taskListId
     const targetListId = listElement.dataset.taskListId
@@ -471,6 +526,136 @@ export default class extends Controller {
         this.updateCounts(targetListId, previousListId, 1)
       }
     })
+  }
+
+  allowDropWeek(event) {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "move"
+  }
+
+  dragEnterWeek(event) {
+    const column = event.currentTarget.closest("[data-planned]")
+    if (!column) return
+    const placeholder = column.querySelector("[data-tasks-board-target='placeholder']")
+    if (placeholder) {
+      placeholder.classList.remove("hidden")
+    }
+  }
+
+  dragLeaveWeek(event) {
+    const column = event.currentTarget.closest("[data-planned]")
+    if (!column) return
+    if (column.contains(event.relatedTarget)) return
+    const placeholder = column.querySelector("[data-tasks-board-target='placeholder']")
+    if (placeholder) {
+      placeholder.classList.add("hidden")
+    }
+  }
+
+  dropOnDay(event) {
+    event.preventDefault()
+    const taskId = event.dataTransfer.getData("text/plain")
+    if (!taskId) return
+
+    const column = event.currentTarget.closest("[data-planned]")
+    if (!column) return
+    const plannedValue = column.dataset.planned
+    const placeholder = column.querySelector("[data-tasks-board-target='placeholder']")
+    if (placeholder) {
+      placeholder.classList.add("hidden")
+    }
+
+    const taskElement = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+    if (taskElement) {
+      taskElement.classList.remove("hidden")
+      taskElement.dataset.taskPlanned = plannedValue
+      this.setBacklogPlannedStyles(taskElement, true)
+    }
+
+    this.dropHandled = true
+    if (this.draggedCardType === "planned" && this.draggedElement) {
+      this.draggedElement.classList.remove("hidden")
+    }
+
+    this.upsertPlannedCard(taskId, plannedValue)
+    this.updatePlanned(taskId, plannedValue)
+  }
+
+  upsertPlannedCard(taskId, plannedValue) {
+    const column = this.element.querySelector(`[data-planned="${plannedValue}"]`)
+    if (!column) return
+    const container = column.querySelector("[data-tasks-board-target='weekCards']")
+    if (!container) return
+
+    let card = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
+    if (card) {
+      container.appendChild(card)
+      return
+    }
+
+    const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+    if (!backlogCard) return
+
+    card = this.buildPlannedCardFromBacklog(backlogCard)
+    container.appendChild(card)
+  }
+
+  buildPlannedCardFromBacklog(backlogCard) {
+    const card = backlogCard.cloneNode(true)
+    card.dataset.cardType = "planned"
+    card.dataset.taskPlanned = backlogCard.dataset.taskPlanned || ""
+    this.setBacklogPlannedStyles(card, false)
+    const icon = card.querySelector("span.text-emerald-400")
+    if (icon) {
+      icon.classList.remove("text-emerald-400")
+      icon.classList.add("text-slate-400")
+    }
+    return card
+  }
+
+  updatePlanned(taskId, plannedValue) {
+    const token = document.querySelector("meta[name='csrf-token']").content
+    fetch(`/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRF-Token": token
+      },
+      body: JSON.stringify({ task: { planned: plannedValue } })
+    }).then((response) => {
+      if (!response.ok) throw new Error("Failed to update planned day")
+    }).catch(() => {
+      const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+      if (backlogCard) {
+        backlogCard.dataset.taskPlanned = ""
+        this.setBacklogPlannedStyles(backlogCard, false)
+      }
+      const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
+      if (plannedCard) {
+        plannedCard.remove()
+      }
+    })
+  }
+
+  setBacklogPlannedStyles(card, planned) {
+    const plannedClasses = ["!bg-emerald-50", "!border-emerald-200", "hover:!border-emerald-300"]
+    if (planned) {
+      card.classList.add(...plannedClasses)
+    } else {
+      card.classList.remove(...plannedClasses)
+    }
+
+    const icon = card.querySelector("span.text-slate-400, span.text-emerald-400")
+    if (icon) {
+      if (planned) {
+        icon.classList.remove("text-slate-400")
+        icon.classList.add("text-emerald-400")
+      } else {
+        icon.classList.remove("text-emerald-400")
+        icon.classList.add("text-slate-400")
+      }
+    }
   }
 
   clearPlaceholders() {

@@ -2,6 +2,20 @@ class TasksController < ApplicationController
   def index
     @task_lists = TaskList.includes(:tasks).order(:name)
     @backlog_task_count = @task_lists.sum { |list| list.tasks.size }
+    @week_days = [
+      { key: "monday", label: "Mon" },
+      { key: "tuesday", label: "Tue" },
+      { key: "wednesday", label: "Wed" },
+      { key: "thursday", label: "Thu" },
+      { key: "friday", label: "Fri" },
+      { key: "saturday", label: "Sat" },
+      { key: "sunday", label: "Sun" },
+      { key: "next_week", label: "Next Week" }
+    ]
+    planned_keys = @week_days.map { |day| day[:key] }
+    @planned_by_day = @task_lists.flat_map(&:tasks)
+                                 .select { |task| planned_keys.include?(task.planned) }
+                                 .group_by(&:planned)
   end
 
   def create
@@ -21,6 +35,7 @@ class TasksController < ApplicationController
         title: task.title,
         description: task.description,
         big: task.big,
+        planned: task.planned,
         position: task.position
       }
     else
@@ -35,6 +50,19 @@ class TasksController < ApplicationController
       if task.update(task_params)
         normalize_positions!(task.task_list_id)
         render json: { id: task.id, archived_at: task.archived_at }
+      else
+        render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
+      end
+      return
+    end
+
+    planned_param_present = params[:task].is_a?(ActionController::Parameters) &&
+      (params[:task].key?(:planned) || params[:task].key?("planned"))
+    planned_value = task_params[:planned].presence
+
+    if planned_param_present && task_params[:task_list_id].blank? && task_params[:position].blank?
+      if task.update(planned: planned_value)
+        render json: { id: task.id, planned: task.planned }
       else
         render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
       end
@@ -68,7 +96,13 @@ class TasksController < ApplicationController
 
       render json: { id: task.id, task_list_id: task.task_list_id, position: task.position }
     elsif task.update(task_params)
-      render json: { id: task.id, title: task.title, description: task.description, big: task.big }
+      render json: {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        big: task.big,
+        planned: task.planned
+      }
     else
       render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
     end
@@ -79,7 +113,7 @@ class TasksController < ApplicationController
   private
 
   def task_params
-    params.require(:task).permit(:task_list_id, :position, :archived_at, :title, :description, :big)
+    params.require(:task).permit(:task_list_id, :position, :archived_at, :title, :description, :big, :planned)
   end
 
   def normalize_positions!(list_id)

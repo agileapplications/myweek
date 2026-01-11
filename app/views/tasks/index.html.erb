@@ -1,42 +1,47 @@
 <main class="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-  <div class="mx-auto max-w-7xl px-6 py-10 flex-1 w-full flex flex-col">
+  <div class="mx-auto max-w-7xl px-6 py-10 flex-1 w-full flex flex-col"
+    data-controller="tasks-board"
+    data-action="keydown@window->tasks-board#keyDown">
     <header class="mb-6">
       <h1 class="text-3xl font-semibold tracking-tight">This Week</h1>
     </header>
 
     <section class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 flex-1">
-      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Mon</h2>
-        <div class="mt-3 flex-1 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
-      </div>
-      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Tue</h2>
-        <div class="mt-3 flex-1 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
-      </div>
-      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Wed</h2>
-        <div class="mt-3 flex-1 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
-      </div>
-      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Thu</h2>
-        <div class="mt-3 flex-1 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
-      </div>
-      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Fri</h2>
-        <div class="mt-3 flex-1 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
-      </div>
-      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Sat</h2>
-        <div class="mt-3 flex-1 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
-      </div>
-      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Sun</h2>
-        <div class="mt-3 flex-1 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
-      </div>
-      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Next Week</h2>
-        <div class="mt-3 flex-1 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
-      </div>
+      <% @week_days.each do |day| %>
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col"
+          data-planned="<%= day[:key] %>"
+          data-action="dragover->tasks-board#allowDropWeek dragenter->tasks-board#dragEnterWeek dragleave->tasks-board#dragLeaveWeek drop->tasks-board#dropOnDay">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600"><%= day[:label] %></h2>
+          <div class="mt-3 flex-1 space-y-2 overflow-y-auto" data-tasks-board-target="weekCards">
+            <div class="hidden rounded-lg border border-dashed border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-500"
+              data-tasks-board-target="placeholder">
+              Drop task here
+            </div>
+            <% (@planned_by_day[day[:key]] || []).each do |task| %>
+              <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow <%= task.big? ? "task-card--big" : "" %>"
+                draggable="true"
+                data-card-type="planned"
+                data-task-id="<%= task.id %>"
+                data-task-list-id="<%= task.task_list_id %>"
+                data-task-title="<%= task.title %>"
+                data-task-description="<%= task.description.to_s %>"
+                data-task-big="<%= task.big? %>"
+                data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="task-title <%= task.big? ? "task-title--big" : "" %>"><%= task.title %></span>
+                  <% if task.description.present? %>
+                    <span class="text-slate-400" aria-label="Has description">
+                      <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                        <path d="M6 4h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.414L6 17.414V4z" />
+                      </svg>
+                    </span>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
     </section>
 
     <details class="group mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -46,7 +51,7 @@
       </summary>
       <div class="px-5 pb-5">
         <div class="h-0 overflow-hidden transition-all duration-300 group-open:h-[50vh]">
-          <div class="h-full overflow-x-auto" data-controller="tasks-board" data-action="keydown@window->tasks-board#keyDown">
+          <div class="h-full overflow-x-auto">
             <div class="flex h-full min-w-max gap-4 pr-4">
               <% @task_lists.each do |list| %>
                 <div class="w-56 flex-shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col"
@@ -74,18 +79,20 @@
                       Drop task here
                     </div>
                     <% list.tasks.each do |task| %>
-                      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow <%= task.big? ? "task-card--big" : "" %>"
+                      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow <%= task.big? ? "task-card--big" : "" %> <%= task.planned.present? ? "!bg-emerald-50 !border-emerald-200 hover:!border-emerald-300" : "" %>"
                         draggable="true"
+                        data-card-type="backlog"
                         data-task-id="<%= task.id %>"
                         data-task-list-id="<%= list.id %>"
                         data-task-title="<%= task.title %>"
                         data-task-description="<%= task.description.to_s %>"
                         data-task-big="<%= task.big? %>"
+                        data-task-planned="<%= task.planned.to_s %>"
                         data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard">
                         <div class="flex items-center justify-between gap-2">
                           <span class="task-title <%= task.big? ? "task-title--big" : "" %>"><%= task.title %></span>
                           <% if task.description.present? %>
-                            <span class="text-slate-400" aria-label="Has description">
+                            <span class="<%= task.planned.present? ? "text-emerald-400" : "text-slate-400" %>" aria-label="Has description">
                               <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
                                 <path d="M6 4h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.414L6 17.414V4z" />
                               </svg>
