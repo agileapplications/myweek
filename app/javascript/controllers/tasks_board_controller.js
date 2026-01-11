@@ -35,6 +35,56 @@ export default class extends Controller {
     this.dropHandled = false
   }
 
+  hoverCard(event) {
+    this.hoveredCard = event.currentTarget
+  }
+
+  leaveCard(event) {
+    if (this.hoveredCard === event.currentTarget) {
+      this.hoveredCard = null
+    }
+  }
+
+  keyDown(event) {
+    if (event.key !== "c") return
+    if (!this.hoveredCard) return
+    if (this.draggedElement) return
+
+    const card = this.hoveredCard
+    const taskId = card.dataset.taskId
+    const listId = card.dataset.taskListId
+    const parent = card.parentElement
+    const nextSibling = card.nextElementSibling
+
+    card.classList.add("hidden")
+    this.adjustCount(listId, -1)
+
+    const token = document.querySelector("meta[name='csrf-token']").content
+    fetch(`/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRF-Token": token
+      },
+      body: JSON.stringify({ task: { archived_at: new Date().toISOString() } })
+    }).then((response) => {
+      if (!response.ok) throw new Error("Failed to archive task")
+      card.remove()
+      this.hoveredCard = null
+    }).catch(() => {
+      card.classList.remove("hidden")
+      if (parent) {
+        if (nextSibling && nextSibling.parentElement === parent) {
+          parent.insertBefore(card, nextSibling)
+        } else {
+          parent.appendChild(card)
+        }
+      }
+      this.adjustCount(listId, 1)
+    })
+  }
+
   allowDrop(event) {
     event.preventDefault()
     event.dataTransfer.dropEffect = "move"
@@ -147,8 +197,15 @@ export default class extends Controller {
       this.setCount(previousCount, this.readCount(previousCount) - delta)
     }
 
-    if (targetCount) {
+    if (targetCount && previousListId !== targetListId) {
       this.setCount(targetCount, this.readCount(targetCount) + delta)
+    }
+  }
+
+  adjustCount(listId, delta) {
+    const count = this.findCountElement(listId)
+    if (count) {
+      this.setCount(count, this.readCount(count) + delta)
     }
   }
 

@@ -46,7 +46,7 @@
       </summary>
       <div class="px-5 pb-5">
         <div class="h-0 overflow-hidden transition-all duration-300 group-open:h-[50vh]">
-          <div class="h-full overflow-x-auto" data-controller="tasks-board">
+          <div class="h-full overflow-x-auto" data-controller="tasks-board" data-action="keydown@window->tasks-board#keyDown">
             <div class="flex h-full min-w-max gap-4 pr-4">
               <% @task_lists.each do |list| %>
                 <div class="w-56 flex-shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col"
@@ -68,7 +68,7 @@
                         draggable="true"
                         data-task-id="<%= task.id %>"
                         data-task-list-id="<%= list.id %>"
-                        data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd">
+                        data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard">
                         <%= task.title %>
                       </div>
                     <% end %>

@@ -6,6 +6,17 @@ class TasksController < ApplicationController
 
   def update
     task = Task.find(params[:id])
+
+    if task_params[:archived_at].present?
+      if task.update(task_params)
+        normalize_positions!(task.task_list_id)
+        render json: { id: task.id, archived_at: task.archived_at }
+      else
+        render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
+      end
+      return
+    end
+
     source_list_id = task.task_list_id
     target_list_id = task_params[:task_list_id]&.to_i || source_list_id
     target_position = task_params[:position]&.to_i
@@ -34,7 +45,7 @@ class TasksController < ApplicationController
   private
 
   def task_params
-    params.require(:task).permit(:task_list_id, :position)
+    params.require(:task).permit(:task_list_id, :position, :archived_at)
   end
 
   def normalize_positions!(list_id)

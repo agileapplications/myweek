@@ -1,5 +1,5 @@
 class TaskList < ApplicationRecord
-  has_many :tasks, -> { order(:position, :id) }, dependent: :destroy
+  has_many :tasks, -> { where(archived_at: nil).order(:position, :id) }, dependent: :destroy
 
   validates :name, presence: true
 end
