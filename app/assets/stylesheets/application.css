@@ -17,13 +17,13 @@
 
 .task-title--big {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   white-space: normal;
 }
 
 .task-card--big {
-  min-height: 3.5rem;
+  min-height: 5rem;
 }
 
 .task-card--planned {
@@ -40,7 +40,10 @@
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background: conic-gradient(var(--ring-color) var(--progress), var(--ring-track) 0);
+  background: conic-gradient(
+    var(--ring-color) var(--progress),
+    var(--ring-track) 0
+  );
 }
 
 .subtask-ring::after {

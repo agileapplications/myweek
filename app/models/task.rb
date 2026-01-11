@@ -5,8 +5,7 @@ class Task < ApplicationRecord
     wednesday
     thursday
     friday
-    saturday
-    sunday
+    weekend
     next_week
   ].freeze
 

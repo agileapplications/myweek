@@ -13,15 +13,16 @@
       </button>
     </header>
 
-    <section class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 flex-1">
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 flex-1">
       <% @week_days.each do |day| %>
-        <% weekend = day[:key] == "saturday" || day[:key] == "sunday" || day[:key] == "next_week" %>
+        <% weekend = day[:key] == "weekend" %>
+        <% next_week = day[:key] == "next_week" %>
         <div class="rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col 
-          <%= weekend ? "bg-slate-100 text-slate-700" : "bg-white" %>
-          <%= weekend ? "dark:bg-slate-900/60" : "bg-white" %>"
+          <%= weekend || next_week ? "bg-slate-100 text-slate-700" : "bg-white" %>
+          <%= weekend || next_week ? "dark:bg-slate-900/60" : "" %>
           data-planned="<%= day[:key] %>"
           data-action="dragover->tasks-board#allowDropWeek dragenter->tasks-board#dragEnterWeek dragleave->tasks-board#dragLeaveWeek drop->tasks-board#dropOnDay">
-          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300 <%= weekend ? "text-slate-500" : "" %>"><%= day[:label] %></h2>
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300 <%= weekend ? "text-slate-500" : "" %> <%= next_week ? "text-slate-400" : "" %>"><%= day[:label] %></h2>
           <div class="mt-3 flex-1 space-y-2 overflow-y-auto" data-tasks-board-target="weekCards">
             <div class="hidden rounded-lg border border-dashed border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-500 dark:border-emerald-700/60 dark:bg-emerald-950/50 dark:text-emerald-300"
               data-tasks-board-target="placeholder">

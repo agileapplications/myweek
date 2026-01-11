@@ -8,8 +8,7 @@ class TasksController < ApplicationController
       { key: "wednesday", label: "Wed" },
       { key: "thursday", label: "Thu" },
       { key: "friday", label: "Fri" },
-      { key: "saturday", label: "Sat" },
-      { key: "sunday", label: "Sun" },
+      { key: "weekend", label: "Weekend" },
       { key: "next_week", label: "Next Week" }
     ]
     planned_keys = @week_days.map { |day| day[:key] }
