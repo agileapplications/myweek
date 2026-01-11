@@ -59,11 +59,13 @@ export default class extends Controller {
     if (this.draggedElement) return
 
     if (event.key === "c") {
+      event.preventDefault()
       this.archiveHoveredCard()
       return
     }
 
     if (event.key === "e") {
+      event.preventDefault()
       this.openEdit()
     }
   }
