@@ -4,6 +4,29 @@ class TasksController < ApplicationController
     @backlog_task_count = @task_lists.sum { |list| list.tasks.size }
   end
 
+  def create
+    list = TaskList.find_by(id: task_params[:task_list_id])
+    unless list
+      render json: { errors: ["Task list not found"] }, status: :unprocessable_entity
+      return
+    end
+    position = list.tasks.count
+
+    task = list.tasks.new(task_params.except(:position).merge(position: position))
+
+    if task.save
+      render json: {
+        id: task.id,
+        task_list_id: task.task_list_id,
+        title: task.title,
+        description: task.description,
+        position: task.position
+      }
+    else
+      render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
+    end
+  end
+
   def update
     task = Task.find(params[:id])
 
@@ -17,27 +40,37 @@ class TasksController < ApplicationController
       return
     end
 
-    source_list_id = task.task_list_id
-    target_list_id = task_params[:task_list_id]&.to_i || source_list_id
-    target_position = task_params[:position]&.to_i
+    if task_params[:task_list_id].present? || task_params[:position].present?
+      source_list_id = task.task_list_id
+      target_list_id = task_params[:task_list_id]&.to_i || source_list_id
+      target_position = task_params[:position]&.to_i
 
-    Task.transaction do
-      normalize_positions!(source_list_id)
-      normalize_positions!(target_list_id) if target_list_id != source_list_id
+      Task.transaction do
+        normalize_positions!(source_list_id)
+        normalize_positions!(target_list_id) if target_list_id != source_list_id
 
-      target_position = Task.where(task_list_id: target_list_id).where.not(id: task.id).count if target_position.nil?
-      target_position = [[target_position, 0].max, Task.where(task_list_id: target_list_id).where.not(id: task.id).count].min
+      target_position = Task.where(task_list_id: target_list_id, archived_at: nil).where.not(id: task.id).count if target_position.nil?
+      target_position = [
+        [target_position, 0].max,
+        Task.where(task_list_id: target_list_id, archived_at: nil).where.not(id: task.id).count
+      ].min
 
-      Task.where(task_list_id: target_list_id).where.not(id: task.id).where("position >= ?", target_position)
+      Task.where(task_list_id: target_list_id, archived_at: nil).where.not(id: task.id)
+          .where("position >= ?", target_position)
           .update_all("position = position + 1")
 
-      task.update!(task_list_id: target_list_id, position: target_position)
+        task.update!(task_list_id: target_list_id, position: target_position)
 
-      normalize_positions!(source_list_id)
-      normalize_positions!(target_list_id)
+        normalize_positions!(source_list_id)
+        normalize_positions!(target_list_id)
+      end
+
+      render json: { id: task.id, task_list_id: task.task_list_id, position: task.position }
+    elsif task.update(task_params)
+      render json: { id: task.id, title: task.title, description: task.description }
+    else
+      render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
     end
-
-    render json: { id: task.id, task_list_id: task.task_list_id, position: task.position }
   rescue ActiveRecord::RecordInvalid
     render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
   end
@@ -45,11 +78,11 @@ class TasksController < ApplicationController
   private
 
   def task_params
-    params.require(:task).permit(:task_list_id, :position, :archived_at)
+    params.require(:task).permit(:task_list_id, :position, :archived_at, :title, :description)
   end
 
   def normalize_positions!(list_id)
-    Task.where(task_list_id: list_id).order(:position, :id).pluck(:id).each_with_index do |id, index|
+    Task.where(task_list_id: list_id, archived_at: nil).order(:position, :id).pluck(:id).each_with_index do |id, index|
       Task.where(id: id).update_all(position: index)
     end
   end

@@ -28,6 +28,7 @@ list_names.each do |name|
   task_count = rng.rand(2..10)
   task_count.times do |index|
     title = "#{verbs.sample(random: rng)} #{nouns.sample(random: rng)} ##{index + 1}"
-    list.tasks.create!(title: title, position: index)
+    description = rng.rand < 0.35 ? "Notes for #{title.downcase}." : nil
+    list.tasks.create!(title: title, description: description, position: index)
   end
 end
