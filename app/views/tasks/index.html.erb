@@ -18,8 +18,10 @@
         <% weekend = day[:key] == "weekend" %>
         <% next_week = day[:key] == "next_week" %>
         <div class="rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col 
-          <%= weekend || next_week ? "bg-slate-100 text-slate-700" : "bg-white" %>
-          <%= weekend || next_week ? "dark:bg-slate-900/60" : "" %>
+          <%= weekend ? "bg-slate-100 text-slate-700" : "bg-white" %>
+          <%= next_week ? "bg-slate-100/80 text-slate-700" : "" %>
+          <%= weekend ? "dark:bg-slate-900/60" : "" %>
+          <%= next_week ? "dark:bg-slate-900/30" : "" %>"
           data-planned="<%= day[:key] %>"
           data-action="dragover->tasks-board#allowDropWeek dragenter->tasks-board#dragEnterWeek dragleave->tasks-board#dragLeaveWeek drop->tasks-board#dropOnDay">
           <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300 <%= weekend ? "text-slate-500" : "" %> <%= next_week ? "text-slate-400" : "" %>"><%= day[:label] %></h2>
