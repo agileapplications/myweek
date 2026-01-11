@@ -74,15 +74,16 @@
                       Drop task here
                     </div>
                     <% list.tasks.each do |task| %>
-                      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow"
+                      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow <%= task.big? ? "task-card--big" : "" %>"
                         draggable="true"
                         data-task-id="<%= task.id %>"
                         data-task-list-id="<%= list.id %>"
                         data-task-title="<%= task.title %>"
                         data-task-description="<%= task.description.to_s %>"
+                        data-task-big="<%= task.big? %>"
                         data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard">
                         <div class="flex items-center justify-between gap-2">
-                          <span><%= task.title %></span>
+                          <span class="task-title <%= task.big? ? "task-title--big" : "" %>"><%= task.title %></span>
                           <% if task.description.present? %>
                             <span class="text-slate-400" aria-label="Has description">
                               <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
@@ -121,6 +122,12 @@
                       class="mt-2 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400"
                       data-tasks-board-target="descriptionInput"></textarea>
                   </div>
+                  <label class="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox"
+                      class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                      data-tasks-board-target="bigCheckbox" />
+                    Big task (double height)
+                  </label>
                   <p class="hidden text-sm text-rose-600" data-tasks-board-target="error">Title is required.</p>
                   <div class="flex items-center justify-end gap-3">
                     <button type="button"

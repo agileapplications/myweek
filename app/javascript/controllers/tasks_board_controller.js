@@ -6,6 +6,7 @@ export default class extends Controller {
     "modalTitle",
     "titleInput",
     "descriptionInput",
+    "bigCheckbox",
     "error"
   ]
 
@@ -54,7 +55,13 @@ export default class extends Controller {
   }
 
   keyDown(event) {
-    if (this.hasModalTarget && !this.modalTarget.classList.contains("hidden")) return
+    if (this.hasModalTarget && !this.modalTarget.classList.contains("hidden")) {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        this.closeModal()
+      }
+      return
+    }
     if (!this.hoveredCard) return
     if (this.draggedElement) return
 
@@ -85,15 +92,21 @@ export default class extends Controller {
     this.editingTaskId = card.dataset.taskId
     this.activeListId = card.dataset.taskListId
     this.activeCard = card
-    this.showModal("Edit Task", card.dataset.taskTitle, card.dataset.taskDescription)
+    this.showModal(
+      "Edit Task",
+      card.dataset.taskTitle,
+      card.dataset.taskDescription,
+      card.dataset.taskBig === "true"
+    )
   }
 
-  showModal(title, taskTitle = "", taskDescription = "") {
+  showModal(title, taskTitle = "", taskDescription = "", isBig = false) {
     this.modalTarget.classList.remove("hidden")
     this.modalTarget.classList.add("flex")
     this.modalTitleTarget.textContent = title
     this.titleInputTarget.value = taskTitle
     this.descriptionInputTarget.value = taskDescription
+    this.bigCheckboxTarget.checked = isBig
     this.errorTarget.classList.add("hidden")
     this.errorTarget.textContent = "Title is required."
     this.titleInputTarget.focus()
@@ -111,6 +124,7 @@ export default class extends Controller {
     event.preventDefault()
     const title = this.titleInputTarget.value.trim()
     const description = this.descriptionInputTarget.value.trim()
+    const isBig = this.bigCheckboxTarget.checked
     if (!title) {
       this.errorTarget.classList.remove("hidden")
       this.titleInputTarget.focus()
@@ -124,7 +138,7 @@ export default class extends Controller {
     }
 
     const token = document.querySelector("meta[name='csrf-token']").content
-    const payload = { task: { title: title, description: description || null } }
+    const payload = { task: { title: title, description: description || null, big: isBig } }
     const request = this.editingTaskId
       ? { url: `/tasks/${this.editingTaskId}`, method: "PATCH" }
       : { url: "/tasks", method: "POST" }
@@ -150,7 +164,7 @@ export default class extends Controller {
       return response.json()
     }).then((data) => {
       if (this.editingTaskId && this.activeCard) {
-        this.applyCardUpdate(this.activeCard, data.title, data.description)
+        this.applyCardUpdate(this.activeCard, data.title, data.description, data.big)
       } else {
         this.insertNewCard(data)
       }
@@ -161,15 +175,17 @@ export default class extends Controller {
     })
   }
 
-  applyCardUpdate(card, title, description) {
+  applyCardUpdate(card, title, description, isBig) {
     card.dataset.taskTitle = title
     card.dataset.taskDescription = description || ""
+    card.dataset.taskBig = isBig
 
     const titleSpan = card.querySelector("span")
     if (titleSpan) {
       titleSpan.textContent = title
     }
 
+    this.syncBigStyles(card, isBig)
     this.syncDescriptionIcon(card, description)
   }
 
@@ -192,13 +208,18 @@ export default class extends Controller {
     card.dataset.taskListId = data.task_list_id
     card.dataset.taskTitle = data.title
     card.dataset.taskDescription = data.description || ""
+    card.dataset.taskBig = data.big
     card.dataset.action = "dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard"
+    if (data.big) {
+      card.classList.add("task-card--big")
+    }
 
     const wrapper = document.createElement("div")
     wrapper.className = "flex items-center justify-between gap-2"
 
     const titleSpan = document.createElement("span")
     titleSpan.textContent = data.title
+    titleSpan.className = `task-title ${data.big ? "task-title--big" : ""}`.trim()
 
     wrapper.appendChild(titleSpan)
     if (data.description) {
@@ -229,6 +250,22 @@ export default class extends Controller {
       wrapper.appendChild(this.buildDescriptionIcon())
     } else if (!description && existingIcon) {
       existingIcon.remove()
+    }
+  }
+
+  syncBigStyles(card, isBig) {
+    if (isBig) {
+      card.classList.add("task-card--big")
+    } else {
+      card.classList.remove("task-card--big")
+    }
+    const titleSpan = card.querySelector(".task-title")
+    if (titleSpan) {
+      if (isBig) {
+        titleSpan.classList.add("task-title--big")
+      } else {
+        titleSpan.classList.remove("task-title--big")
+      }
     }
   }
 

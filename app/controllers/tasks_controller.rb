@@ -20,6 +20,7 @@ class TasksController < ApplicationController
         task_list_id: task.task_list_id,
         title: task.title,
         description: task.description,
+        big: task.big,
         position: task.position
       }
     else
@@ -67,7 +68,7 @@ class TasksController < ApplicationController
 
       render json: { id: task.id, task_list_id: task.task_list_id, position: task.position }
     elsif task.update(task_params)
-      render json: { id: task.id, title: task.title, description: task.description }
+      render json: { id: task.id, title: task.title, description: task.description, big: task.big }
     else
       render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
     end
@@ -78,7 +79,7 @@ class TasksController < ApplicationController
   private
 
   def task_params
-    params.require(:task).permit(:task_list_id, :position, :archived_at, :title, :description)
+    params.require(:task).permit(:task_list_id, :position, :archived_at, :title, :description, :big)
   end
 
   def normalize_positions!(list_id)
