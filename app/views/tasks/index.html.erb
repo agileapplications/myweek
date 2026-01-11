@@ -74,7 +74,7 @@
                       Drop task here
                     </div>
                     <% list.tasks.each do |task| %>
-                      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing"
+                      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow"
                         draggable="true"
                         data-task-id="<%= task.id %>"
                         data-task-list-id="<%= list.id %>"
