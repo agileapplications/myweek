@@ -5,11 +5,40 @@ export default class extends Controller {
     const taskId = event.currentTarget.dataset.taskId
     event.dataTransfer.setData("text/plain", taskId)
     event.dataTransfer.effectAllowed = "move"
+    this.draggedElement = event.currentTarget
+    this.draggedNextSibling = event.currentTarget.nextElementSibling
+    this.draggedParent = event.currentTarget.parentElement
+    this.dropHandled = false
+
+    setTimeout(() => {
+      if (this.draggedElement) {
+        this.draggedElement.classList.add("hidden")
+      }
+    }, 0)
+  }
+
+  dragEnd() {
+    this.clearPlaceholders()
+    if (this.draggedElement) {
+      this.draggedElement.classList.remove("hidden")
+      if (!this.dropHandled && this.draggedParent && this.draggedElement.parentElement !== this.draggedParent) {
+        if (this.draggedNextSibling && this.draggedNextSibling.parentElement === this.draggedParent) {
+          this.draggedParent.insertBefore(this.draggedElement, this.draggedNextSibling)
+        } else {
+          this.draggedParent.appendChild(this.draggedElement)
+        }
+      }
+    }
+    this.draggedElement = null
+    this.draggedNextSibling = null
+    this.draggedParent = null
+    this.dropHandled = false
   }
 
   allowDrop(event) {
     event.preventDefault()
     event.dataTransfer.dropEffect = "move"
+    this.positionPlaceholder(event)
   }
 
   dragEnter(event) {
@@ -38,6 +67,7 @@ export default class extends Controller {
 
     const listElement = event.currentTarget.closest("[data-task-list-id]")
     if (!listElement) return
+    this.dropHandled = true
     const placeholder = listElement.querySelector("[data-tasks-board-target='placeholder']")
     if (placeholder) {
       placeholder.classList.add("hidden")
@@ -48,17 +78,65 @@ export default class extends Controller {
 
     const previousListId = taskElement.dataset.taskListId
     const targetListId = listElement.dataset.taskListId
-    if (previousListId === targetListId) return
 
     const previousContainer = taskElement.parentElement
     const targetContainer = listElement.querySelector("[data-tasks-board-target='cards']")
     if (!targetContainer) return
 
-    targetContainer.appendChild(taskElement)
-    taskElement.dataset.taskListId = targetListId
+    if (placeholder && placeholder.parentElement === targetContainer) {
+      targetContainer.insertBefore(taskElement, placeholder)
+    } else {
+      targetContainer.appendChild(taskElement)
+    }
 
-    this.updateCounts(previousListId, targetListId, 1)
-    this.updateTask(taskId, targetListId, taskElement, previousContainer, previousListId)
+    const targetPosition = Array.from(targetContainer.querySelectorAll("[data-task-id]")).indexOf(taskElement)
+    taskElement.dataset.taskListId = targetListId
+    taskElement.classList.remove("hidden")
+
+    if (previousListId !== targetListId) {
+      this.updateCounts(previousListId, targetListId, 1)
+    }
+
+    this.updateTask(
+      taskId,
+      targetListId,
+      targetPosition,
+      taskElement,
+      previousContainer,
+      previousListId,
+      this.draggedNextSibling
+    )
+  }
+
+  positionPlaceholder(event) {
+    const listElement = event.currentTarget.closest("[data-task-list-id]")
+    if (!listElement) return
+
+    const container = listElement.querySelector("[data-tasks-board-target='cards']")
+    const placeholder = listElement.querySelector("[data-tasks-board-target='placeholder']")
+    if (!container || !placeholder) return
+
+    placeholder.classList.remove("hidden")
+
+    const cards = Array.from(container.querySelectorAll("[data-task-id]")).filter(
+      (card) => card !== this.draggedElement
+    )
+    const y = event.clientY
+    let insertBefore = null
+
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect()
+      if (y < rect.top + rect.height / 2) {
+        insertBefore = card
+        break
+      }
+    }
+
+    if (insertBefore) {
+      container.insertBefore(placeholder, insertBefore)
+    } else {
+      container.appendChild(placeholder)
+    }
   }
 
   updateCounts(previousListId, targetListId, delta) {
@@ -88,7 +166,7 @@ export default class extends Controller {
     element.textContent = `${safeCount} ${safeCount === 1 ? "task" : "tasks"}`
   }
 
-  updateTask(taskId, targetListId, taskElement, previousContainer, previousListId) {
+  updateTask(taskId, targetListId, targetPosition, taskElement, previousContainer, previousListId, previousNextSibling) {
     const token = document.querySelector("meta[name='csrf-token']").content
 
     fetch(`/tasks/${taskId}`, {
@@ -98,15 +176,28 @@ export default class extends Controller {
         "Accept": "application/json",
         "X-CSRF-Token": token
       },
-      body: JSON.stringify({ task: { task_list_id: targetListId } })
+      body: JSON.stringify({ task: { task_list_id: targetListId, position: targetPosition } })
     }).then((response) => {
       if (!response.ok) throw new Error("Failed to update task list")
     }).catch(() => {
       if (previousContainer) {
-        previousContainer.appendChild(taskElement)
+        if (previousNextSibling && previousNextSibling.parentElement === previousContainer) {
+          previousContainer.insertBefore(taskElement, previousNextSibling)
+        } else {
+          previousContainer.appendChild(taskElement)
+        }
       }
       taskElement.dataset.taskListId = previousListId
-      this.updateCounts(targetListId, previousListId, 1)
+      taskElement.classList.remove("hidden")
+      if (previousListId !== targetListId) {
+        this.updateCounts(targetListId, previousListId, 1)
+      }
+    })
+  }
+
+  clearPlaceholders() {
+    this.element.querySelectorAll("[data-tasks-board-target='placeholder']").forEach((placeholder) => {
+      placeholder.classList.add("hidden")
     })
   }
 }

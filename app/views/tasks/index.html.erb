@@ -59,7 +59,7 @@
                     <%= pluralize(list.tasks.size, "task") %>
                   </p>
                   <div class="mt-3 flex-1 space-y-2 overflow-y-auto" data-tasks-board-target="cards">
-                    <div class="hidden rounded-lg border-2 border-dashed border-slate-300 bg-white/70 px-3 py-2 text-sm text-slate-400"
+                    <div class="hidden rounded-lg border border-dashed border-slate-300 bg-white/70 px-3 py-2 text-sm text-slate-400"
                       data-tasks-board-target="placeholder">
                       Drop task here
                     </div>
@@ -68,7 +68,7 @@
                         draggable="true"
                         data-task-id="<%= task.id %>"
                         data-task-list-id="<%= list.id %>"
-                        data-action="dragstart->tasks-board#dragStart">
+                        data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd">
                         <%= task.title %>
                       </div>
                     <% end %>

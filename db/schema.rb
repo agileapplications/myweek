@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_01_01_000001) do
+ActiveRecord::Schema[8.1].define(version: 2025_01_01_000002) do
   create_table "task_lists", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -19,9 +19,11 @@ ActiveRecord::Schema[8.1].define(version: 2025_01_01_000001) do
 
   create_table "tasks", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.integer "position", default: 0, null: false
     t.integer "task_list_id", null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
+    t.index ["task_list_id", "position"], name: "index_tasks_on_task_list_id_and_position"
     t.index ["task_list_id"], name: "index_tasks_on_task_list_id"
   end
 
