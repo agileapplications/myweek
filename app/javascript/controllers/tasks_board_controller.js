@@ -7,7 +7,8 @@ export default class extends Controller {
     "titleInput",
     "descriptionInput",
     "bigCheckbox",
-    "error"
+    "error",
+    "contextMenu"
   ]
 
   dragStart(event) {
@@ -19,6 +20,7 @@ export default class extends Controller {
     this.draggedParent = event.currentTarget.parentElement
     this.dropHandled = false
     this.draggedCardType = event.currentTarget.dataset.cardType
+    this.closeContextMenu()
 
     setTimeout(() => {
       if (this.draggedElement) {
@@ -84,6 +86,13 @@ export default class extends Controller {
     }
   }
 
+  openEditFromClick(event) {
+    if (this.draggedElement) return
+    event.preventDefault()
+    this.hoveredCard = event.currentTarget
+    this.openEdit()
+  }
+
   openNew(event) {
     const listId = event.currentTarget.dataset.taskListId ||
       event.currentTarget.closest("[data-task-list-id]")?.dataset.taskListId
@@ -94,8 +103,8 @@ export default class extends Controller {
   }
 
   openEdit() {
-    if (!this.hoveredCard) return
-    const card = this.hoveredCard
+    const card = this.contextCard || this.hoveredCard
+    if (!card) return
     this.editingTaskId = card.dataset.taskId
     this.activeListId = card.dataset.taskListId
     this.activeCard = card
@@ -125,6 +134,7 @@ export default class extends Controller {
     this.editingTaskId = null
     this.activeListId = null
     this.activeCard = null
+    this.closeContextMenu()
   }
 
   submitForm(event) {
@@ -233,7 +243,7 @@ export default class extends Controller {
     card.dataset.taskDescription = data.description || ""
     card.dataset.taskBig = data.big
     card.dataset.taskPlanned = data.planned || ""
-    card.dataset.action = "dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard"
+    card.dataset.action = "dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard click->tasks-board#openEditFromClick contextmenu->tasks-board#openContextMenu"
     if (data.big) {
       card.classList.add("task-card--big")
     }
@@ -318,6 +328,11 @@ export default class extends Controller {
 
   archiveHoveredCard() {
     const card = this.hoveredCard
+    if (!card) return
+    this.archiveCard(card)
+  }
+
+  archiveCard(card) {
     if (!card) return
     const taskId = card.dataset.taskId
     const listId = card.dataset.taskListId
@@ -656,6 +671,56 @@ export default class extends Controller {
         icon.classList.add("text-slate-400")
       }
     }
+  }
+
+  openContextMenu(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (this.draggedElement) return
+    this.contextCard = event.currentTarget
+    this.closeContextMenu()
+    const menu = this.contextMenuTarget
+    menu.style.left = `${event.clientX + 8}px`
+    menu.style.top = `${event.clientY + 8}px`
+    menu.classList.remove("hidden")
+    setTimeout(() => {
+      document.addEventListener("click", this.boundCloseContextMenu)
+      document.addEventListener("contextmenu", this.boundCloseContextMenu)
+    }, 0)
+  }
+
+  contextEdit(event) {
+    event.preventDefault()
+    const card = this.contextCard
+    this.closeContextMenu()
+    if (card) {
+      this.contextCard = card
+    }
+    this.openEdit()
+    this.contextCard = null
+  }
+
+  contextArchive(event) {
+    event.preventDefault()
+    const card = this.contextCard
+    this.closeContextMenu()
+    if (card) {
+      this.archiveCard(card)
+    } else {
+      this.archiveHoveredCard()
+    }
+    this.contextCard = null
+  }
+
+  closeContextMenu() {
+    if (!this.hasContextMenuTarget) return
+    this.contextMenuTarget.classList.add("hidden")
+    document.removeEventListener("click", this.boundCloseContextMenu)
+    document.removeEventListener("contextmenu", this.boundCloseContextMenu)
+  }
+
+  boundCloseContextMenu = () => {
+    this.closeContextMenu()
   }
 
   clearPlaceholders() {
