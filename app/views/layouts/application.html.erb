@@ -11,6 +11,17 @@
 
     <%= yield :head %>
 
+    <script>
+      window.tailwind = { config: { darkMode: "class" } }
+    </script>
+    <script>
+      (function () {
+        const stored = localStorage.getItem("theme")
+        if (stored === "dark") {
+          document.documentElement.classList.add("dark")
+        }
+      })()
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
@@ -22,6 +33,7 @@
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "theme", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
