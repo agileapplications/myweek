@@ -11,6 +11,7 @@ class Task < ApplicationRecord
   ].freeze
 
   belongs_to :task_list
+  has_many :sub_tasks, dependent: :destroy
 
   validates :title, presence: true
   validates :position, numericality: { greater_than_or_equal_to: 0 }

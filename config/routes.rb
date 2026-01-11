@@ -13,4 +13,5 @@ Rails.application.routes.draw do
   root "tasks#index"
 
   resources :tasks, only: [:create, :update]
+  resources :sub_tasks, only: [:create, :update, :destroy]
 end

@@ -17,16 +17,44 @@
 
 .task-title--big {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   white-space: normal;
 }
 
 .task-card--big {
-  min-height: 5rem;
+  min-height: 3.5rem;
 }
 
 .task-card--planned {
   background-color: #ecfdf5;
   border-color: #bbf7d0;
+}
+
+.subtask-ring {
+  --progress: 0%;
+  --ring-color: #facc15;
+  --ring-track: #e2e8f0;
+  position: relative;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: conic-gradient(var(--ring-color) var(--progress), var(--ring-track) 0);
+}
+
+.subtask-ring::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 9999px;
+  background: #ffffff;
+}
+
+.subtask-ring--complete {
+  --ring-color: #22c55e;
+}
+
+.subtask-ring--progress {
+  --ring-color: #facc15;
 }

@@ -28,6 +28,10 @@
               Drop task here
             </div>
             <% (@planned_by_day[day[:key]] || []).each do |task| %>
+              <% sub_total = task.sub_tasks.size %>
+              <% sub_done = task.sub_tasks.count(&:completed) %>
+              <% sub_progress = sub_total.zero? ? 0 : ((sub_done.to_f / sub_total) * 100).round %>
+              <% ring_class = sub_total.zero? ? "hidden" : (sub_done == sub_total ? "subtask-ring--complete" : "subtask-ring--progress") %>
               <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 <%= task.big? ? "task-card--big" : "" %>"
                 draggable="true"
                 data-card-type="planned"
@@ -37,16 +41,22 @@
                 data-task-description="<%= task.description.to_s %>"
                 data-task-big="<%= task.big? %>"
                 data-task-planned="<%= task.planned.to_s %>"
+                data-subtask-total="<%= sub_total %>"
+                data-subtask-done="<%= sub_done %>"
+                data-sub-tasks="<%= ERB::Util.html_escape(task.sub_tasks.map { |sub| { id: sub.id, title: sub.title, completed: sub.completed } }.to_json) %>"
                 data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard click->tasks-board#openEditFromClick contextmenu->tasks-board#openContextMenu">
                 <div class="flex items-center justify-between gap-2">
                   <span class="task-title <%= task.big? ? "task-title--big" : "" %>"><%= task.title %></span>
-                  <% if task.description.present? %>
-                    <span class="text-slate-400 dark:text-slate-500" aria-label="Has description">
-                      <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
-                        <path d="M6 4h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.414L6 17.414V4z" />
-                      </svg>
-                    </span>
-                  <% end %>
+                  <div class="flex items-center gap-2">
+                    <span class="subtask-ring <%= ring_class %>" style="--progress: <%= sub_progress %>%"></span>
+                    <% if task.description.present? %>
+                      <span class="text-slate-400 dark:text-slate-500" aria-label="Has description">
+                        <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                          <path d="M6 4h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.414L6 17.414V4z" />
+                        </svg>
+                      </span>
+                    <% end %>
+                  </div>
                 </div>
               </div>
             <% end %>
@@ -90,6 +100,10 @@
                       Drop task here
                     </div>
                     <% list.tasks.each do |task| %>
+                      <% sub_total = task.sub_tasks.size %>
+                      <% sub_done = task.sub_tasks.count(&:completed) %>
+                      <% sub_progress = sub_total.zero? ? 0 : ((sub_done.to_f / sub_total) * 100).round %>
+                      <% ring_class = sub_total.zero? ? "hidden" : (sub_done == sub_total ? "subtask-ring--complete" : "subtask-ring--progress") %>
                       <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 <%= task.big? ? "task-card--big" : "" %> <%= task.planned.present? ? "!bg-emerald-50 !border-emerald-200 hover:!border-emerald-300 dark:!bg-emerald-950/60 dark:!border-emerald-700/60 dark:hover:!border-emerald-500" : "" %>"
                         draggable="true"
                         data-card-type="backlog"
@@ -99,16 +113,22 @@
                         data-task-description="<%= task.description.to_s %>"
                         data-task-big="<%= task.big? %>"
                         data-task-planned="<%= task.planned.to_s %>"
+                        data-subtask-total="<%= sub_total %>"
+                        data-subtask-done="<%= sub_done %>"
+                        data-sub-tasks="<%= ERB::Util.html_escape(task.sub_tasks.map { |sub| { id: sub.id, title: sub.title, completed: sub.completed } }.to_json) %>"
                         data-action="dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard click->tasks-board#openEditFromClick contextmenu->tasks-board#openContextMenu">
                         <div class="flex items-center justify-between gap-2">
                           <span class="task-title <%= task.big? ? "task-title--big" : "" %>"><%= task.title %></span>
-                          <% if task.description.present? %>
-                            <span class="<%= task.planned.present? ? "text-emerald-400" : "text-slate-400 dark:text-slate-500" %>" aria-label="Has description">
-                              <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
-                                <path d="M6 4h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.414L6 17.414V4z" />
-                              </svg>
-                            </span>
-                          <% end %>
+                          <div class="flex items-center gap-2">
+                            <span class="subtask-ring <%= ring_class %>" style="--progress: <%= sub_progress %>%"></span>
+                            <% if task.description.present? %>
+                              <span class="<%= task.planned.present? ? "text-emerald-400" : "text-slate-400 dark:text-slate-500" %>" aria-label="Has description">
+                                <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                                  <path d="M6 4h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.414L6 17.414V4z" />
+                                </svg>
+                              </span>
+                            <% end %>
+                          </div>
                         </div>
                       </div>
                     <% end %>
@@ -144,6 +164,26 @@
             <textarea id="task-description" name="description" rows="4"
               class="mt-2 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               data-tasks-board-target="descriptionInput"></textarea>
+          </div>
+          <div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Subtasks</label>
+              <button type="button"
+                class="text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                data-action="click->tasks-board#addSubTask">
+                Add
+              </button>
+            </div>
+            <div class="mt-2 space-y-2" data-tasks-board-target="subTaskList"></div>
+            <div class="mt-2 flex items-center gap-2">
+              <input type="text"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                placeholder="New subtask"
+                data-tasks-board-target="subTaskInput" />
+            </div>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 hidden" data-tasks-board-target="subTaskHint">
+              Save the task before adding subtasks.
+            </p>
           </div>
           <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
             <input type="checkbox"

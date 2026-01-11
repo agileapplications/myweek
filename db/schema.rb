@@ -10,7 +10,16 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_01_01_000006) do
+ActiveRecord::Schema[8.1].define(version: 2025_01_01_000007) do
+  create_table "sub_tasks", force: :cascade do |t|
+    t.boolean "completed", default: false, null: false
+    t.datetime "created_at", null: false
+    t.integer "task_id", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task_id"], name: "index_sub_tasks_on_task_id"
+  end
+
   create_table "task_lists", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -33,5 +42,6 @@ ActiveRecord::Schema[8.1].define(version: 2025_01_01_000006) do
     t.index ["task_list_id"], name: "index_tasks_on_task_list_id"
   end
 
+  add_foreign_key "sub_tasks", "tasks"
   add_foreign_key "tasks", "task_lists"
 end

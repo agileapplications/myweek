@@ -9,7 +9,10 @@ export default class extends Controller {
     "bigCheckbox",
     "error",
     "contextMenu",
-    "contextUnplan"
+    "contextUnplan",
+    "subTaskList",
+    "subTaskInput",
+    "subTaskHint"
   ]
 
   dragStart(event) {
@@ -100,6 +103,7 @@ export default class extends Controller {
     this.activeListId = listId
     this.editingTaskId = null
     this.activeCard = null
+    this.currentSubTasks = []
     this.showModal("New Task")
   }
 
@@ -109,6 +113,7 @@ export default class extends Controller {
     this.editingTaskId = card.dataset.taskId
     this.activeListId = card.dataset.taskListId
     this.activeCard = card
+    this.currentSubTasks = this.parseSubTasks(card)
     this.showModal(
       "Edit Task",
       card.dataset.taskTitle,
@@ -126,6 +131,8 @@ export default class extends Controller {
     this.bigCheckboxTarget.checked = isBig
     this.errorTarget.classList.add("hidden")
     this.errorTarget.textContent = "Title is required."
+    this.renderSubTasks()
+    this.updateSubTaskUIState()
     this.titleInputTarget.focus()
   }
 
@@ -135,6 +142,7 @@ export default class extends Controller {
     this.editingTaskId = null
     this.activeListId = null
     this.activeCard = null
+    this.currentSubTasks = null
     this.closeContextMenu()
   }
 
@@ -208,6 +216,203 @@ export default class extends Controller {
     }
   }
 
+  renderSubTasks() {
+    if (!this.hasSubTaskListTarget) return
+    this.subTaskListTarget.innerHTML = ""
+    const subTasks = this.currentSubTasks || []
+    subTasks.forEach((subTask) => {
+      this.subTaskListTarget.appendChild(this.buildSubTaskRow(subTask))
+    })
+  }
+
+  updateSubTaskUIState() {
+    if (!this.hasSubTaskInputTarget || !this.hasSubTaskHintTarget) return
+    const disabled = !this.editingTaskId
+    this.subTaskInputTarget.disabled = disabled
+    this.subTaskInputTarget.value = ""
+    if (disabled) {
+      this.subTaskHintTarget.classList.remove("hidden")
+    } else {
+      this.subTaskHintTarget.classList.add("hidden")
+    }
+  }
+
+  buildSubTaskRow(subTask) {
+    const row = document.createElement("div")
+    row.className = "flex items-center gap-2"
+
+    const checkbox = document.createElement("input")
+    checkbox.type = "checkbox"
+    checkbox.checked = !!subTask.completed
+    checkbox.className = "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-950"
+    checkbox.dataset.subTaskId = subTask.id
+    checkbox.dataset.action = "change->tasks-board#toggleSubTask"
+
+    const input = document.createElement("input")
+    input.type = "text"
+    input.value = subTask.title
+    input.className = "w-full rounded-md border border-transparent px-2 py-1 text-sm text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none dark:text-slate-100 dark:hover:border-slate-700"
+    input.dataset.subTaskId = subTask.id
+    input.dataset.action = "blur->tasks-board#saveSubTask keydown->tasks-board#subTaskKeydown"
+
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "rounded-md p-1 text-slate-400 hover:text-rose-500 dark:text-slate-500"
+    button.dataset.subTaskId = subTask.id
+    button.dataset.action = "click->tasks-board#deleteSubTask"
+    button.innerHTML = `
+      <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+        <path d="M6 6h8l-1 10H7L6 6zm2-3h4l1 2H7l1-2z" />
+      </svg>
+    `
+
+    row.appendChild(checkbox)
+    row.appendChild(input)
+    row.appendChild(button)
+    return row
+  }
+
+  addSubTask(event) {
+    event.preventDefault()
+    if (!this.editingTaskId) {
+      this.updateSubTaskUIState()
+      return
+    }
+    const title = this.subTaskInputTarget.value.trim()
+    if (!title) return
+
+    const token = document.querySelector("meta[name='csrf-token']").content
+    fetch("/sub_tasks", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRF-Token": token
+      },
+      body: JSON.stringify({ sub_task: { task_id: this.editingTaskId, title: title } })
+    }).then((response) => {
+      if (!response.ok) throw new Error("Failed to add subtask")
+      return response.json()
+    }).then((data) => {
+      this.currentSubTasks = this.currentSubTasks || []
+      this.currentSubTasks.push(data)
+      this.subTaskInputTarget.value = ""
+      this.renderSubTasks()
+      this.syncSubTaskData(data.task_id, this.currentSubTasks)
+    })
+  }
+
+  toggleSubTask(event) {
+    const subTaskId = event.currentTarget.dataset.subTaskId
+    const completed = event.currentTarget.checked
+    this.updateSubTask(subTaskId, { completed: completed })
+  }
+
+  saveSubTask(event) {
+    const subTaskId = event.currentTarget.dataset.subTaskId
+    const title = event.currentTarget.value.trim()
+    if (!title) {
+      event.currentTarget.value = this.findSubTask(subTaskId)?.title || ""
+      return
+    }
+    this.updateSubTask(subTaskId, { title: title })
+  }
+
+  subTaskKeydown(event) {
+    if (event.key === "Enter") {
+      event.preventDefault()
+      event.currentTarget.blur()
+    }
+  }
+
+  deleteSubTask(event) {
+    event.preventDefault()
+    const subTaskId = event.currentTarget.dataset.subTaskId
+    const token = document.querySelector("meta[name='csrf-token']").content
+    fetch(`/sub_tasks/${subTaskId}`, {
+      method: "DELETE",
+      headers: {
+        "Accept": "application/json",
+        "X-CSRF-Token": token
+      }
+    }).then((response) => {
+      if (!response.ok) throw new Error("Failed to delete subtask")
+      this.currentSubTasks = (this.currentSubTasks || []).filter((sub) => String(sub.id) !== String(subTaskId))
+      this.renderSubTasks()
+      if (this.editingTaskId) {
+        this.syncSubTaskData(this.editingTaskId, this.currentSubTasks)
+      }
+    })
+  }
+
+  updateSubTask(subTaskId, updates) {
+    const token = document.querySelector("meta[name='csrf-token']").content
+    fetch(`/sub_tasks/${subTaskId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRF-Token": token
+      },
+      body: JSON.stringify({ sub_task: updates })
+    }).then((response) => {
+      if (!response.ok) throw new Error("Failed to update subtask")
+      return response.json()
+    }).then((data) => {
+      this.currentSubTasks = (this.currentSubTasks || []).map((sub) => {
+        return String(sub.id) === String(subTaskId) ? data : sub
+      })
+      this.renderSubTasks()
+      this.syncSubTaskData(data.task_id, this.currentSubTasks)
+    })
+  }
+
+  findSubTask(subTaskId) {
+    return (this.currentSubTasks || []).find((sub) => String(sub.id) === String(subTaskId))
+  }
+
+  parseSubTasks(card) {
+    try {
+      return JSON.parse(card.dataset.subTasks || "[]")
+    } catch (error) {
+      return []
+    }
+  }
+
+  syncSubTaskData(taskId, subTasks) {
+    const total = subTasks.length
+    const done = subTasks.filter((sub) => sub.completed).length
+    const cards = this.element.querySelectorAll(`[data-task-id="${taskId}"]`)
+    cards.forEach((card) => {
+      card.dataset.subTasks = JSON.stringify(subTasks)
+      card.dataset.subtaskTotal = total
+      card.dataset.subtaskDone = done
+      this.updateRing(card, total, done)
+    })
+  }
+
+  updateRing(card, total, done) {
+    const ring = card.querySelector(".subtask-ring")
+    if (!ring) return
+    if (total === 0) {
+      ring.classList.add("hidden")
+      ring.style.setProperty("--progress", "0%")
+      ring.classList.remove("subtask-ring--complete", "subtask-ring--progress")
+      return
+    }
+
+    const progress = Math.round((done / total) * 100)
+    ring.classList.remove("hidden")
+    ring.style.setProperty("--progress", `${progress}%`)
+    if (done === total) {
+      ring.classList.add("subtask-ring--complete")
+      ring.classList.remove("subtask-ring--progress")
+    } else {
+      ring.classList.add("subtask-ring--progress")
+      ring.classList.remove("subtask-ring--complete")
+    }
+  }
+
   updateCardContent(card, title, description, isBig, plannedAccent = false) {
     card.dataset.taskTitle = title
     card.dataset.taskDescription = description || ""
@@ -244,6 +449,9 @@ export default class extends Controller {
     card.dataset.taskDescription = data.description || ""
     card.dataset.taskBig = data.big
     card.dataset.taskPlanned = data.planned || ""
+    card.dataset.subTasks = "[]"
+    card.dataset.subtaskTotal = 0
+    card.dataset.subtaskDone = 0
     card.dataset.action = "dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard click->tasks-board#openEditFromClick contextmenu->tasks-board#openContextMenu"
     if (data.big) {
       card.classList.add("task-card--big")
@@ -260,10 +468,17 @@ export default class extends Controller {
     titleSpan.className = `task-title ${data.big ? "task-title--big" : ""}`.trim()
 
     wrapper.appendChild(titleSpan)
+    const meta = document.createElement("div")
+    meta.className = "flex items-center gap-2"
+    const ring = document.createElement("span")
+    ring.className = "subtask-ring hidden"
+    ring.style.setProperty("--progress", "0%")
+    meta.appendChild(ring)
     if (data.description) {
-      wrapper.appendChild(this.buildDescriptionIcon(!!data.planned))
+      meta.appendChild(this.buildDescriptionIcon(!!data.planned))
     }
 
+    wrapper.appendChild(meta)
     card.appendChild(wrapper)
     return card
   }

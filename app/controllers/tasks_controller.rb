@@ -1,6 +1,6 @@
 class TasksController < ApplicationController
   def index
-    @task_lists = TaskList.includes(:tasks).order(:name)
+    @task_lists = TaskList.includes(tasks: :sub_tasks).order(:name)
     @backlog_task_count = @task_lists.sum { |list| list.tasks.size }
     @week_days = [
       { key: "monday", label: "Mon" },
