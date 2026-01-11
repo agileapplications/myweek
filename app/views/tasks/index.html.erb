@@ -113,69 +113,70 @@
               <% end %>
             </div>
 
-            <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4"
-              data-tasks-board-target="modal">
-              <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
-                <div class="flex items-start justify-between">
-                  <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100" data-tasks-board-target="modalTitle">New Task</h2>
-                  <button type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" data-action="click->tasks-board#closeModal">
-                    <span class="sr-only">Close</span>
-                    ✕
-                  </button>
-                </div>
-                <form class="mt-4 space-y-4" data-action="submit->tasks-board#submitForm">
-                  <div>
-                    <label class="text-sm font-medium text-slate-700 dark:text-slate-200" for="task-title">Title</label>
-                    <input id="task-title" name="title" required
-                      class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                      data-tasks-board-target="titleInput" />
-                  </div>
-                  <div>
-                    <label class="text-sm font-medium text-slate-700 dark:text-slate-200" for="task-description">Description (optional)</label>
-                    <textarea id="task-description" name="description" rows="4"
-                      class="mt-2 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                      data-tasks-board-target="descriptionInput"></textarea>
-                  </div>
-                  <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-                    <input type="checkbox"
-                      class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-950"
-                      data-tasks-board-target="bigCheckbox" />
-                    Big task (double height)
-                  </label>
-                  <p class="hidden text-sm text-rose-600" data-tasks-board-target="error">Title is required.</p>
-                  <div class="flex items-center justify-end gap-3">
-                    <button type="button"
-                      class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                      data-action="click->tasks-board#closeModal">
-                      Cancel
-                    </button>
-                    <button type="submit"
-                      class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                      data-tasks-board-target="submitButton">
-                      Save
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <div class="fixed z-50 hidden w-40 rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900"
-              data-tasks-board-target="contextMenu">
-              <button type="button"
-                class="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                data-action="click->tasks-board#contextEdit">
-                Edit
-              </button>
-              <button type="button"
-                class="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                data-action="click->tasks-board#contextArchive">
-                Archive
-              </button>
-            </div>
           </div>
         </div>
       </div>
     </details>
+
+    <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4"
+      data-tasks-board-target="modal">
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
+        <div class="flex items-start justify-between">
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100" data-tasks-board-target="modalTitle">New Task</h2>
+          <button type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" data-action="click->tasks-board#closeModal">
+            <span class="sr-only">Close</span>
+            ✕
+          </button>
+        </div>
+        <form class="mt-4 space-y-4" data-action="submit->tasks-board#submitForm">
+          <div>
+            <label class="text-sm font-medium text-slate-700 dark:text-slate-200" for="task-title">Title</label>
+            <input id="task-title" name="title" required
+              class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              data-tasks-board-target="titleInput" />
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700 dark:text-slate-200" for="task-description">Description (optional)</label>
+            <textarea id="task-description" name="description" rows="4"
+              class="mt-2 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              data-tasks-board-target="descriptionInput"></textarea>
+          </div>
+          <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+            <input type="checkbox"
+              class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-950"
+              data-tasks-board-target="bigCheckbox" />
+            Big task (double height)
+          </label>
+          <p class="hidden text-sm text-rose-600" data-tasks-board-target="error">Title is required.</p>
+          <div class="flex items-center justify-end gap-3">
+            <button type="button"
+              class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              data-action="click->tasks-board#closeModal">
+              Cancel
+            </button>
+            <button type="submit"
+              class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              data-tasks-board-target="submitButton">
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="fixed z-50 hidden w-40 rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900"
+      data-tasks-board-target="contextMenu">
+      <button type="button"
+        class="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+        data-action="click->tasks-board#contextEdit">
+        Edit
+      </button>
+      <button type="button"
+        class="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+        data-action="click->tasks-board#contextArchive">
+        Archive
+      </button>
+    </div>
   </div>
 </main>
 
