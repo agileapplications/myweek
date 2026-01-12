@@ -13,6 +13,8 @@ type TaskCardProps = {
   onMouseLeave?: () => void
 }
 
+type TaskCardPreviewProps = Pick<TaskCardProps, "task" | "variant">
+
 type BaseTaskCardProps = TaskCardProps & {
   setNodeRef: (element: HTMLElement | null) => void
   listeners?: Record<string, unknown>
@@ -155,3 +157,13 @@ const TaskCard = (props: TaskCardProps) =>
   props.variant === "backlog" ? <SortableTaskCard {...props} /> : <DraggableTaskCard {...props} />
 
 export default TaskCard
+
+export const TaskCardPreview = ({ task, variant }: TaskCardPreviewProps) => (
+  <BaseTaskCard
+    task={task}
+    variant={variant}
+    setNodeRef={() => {}}
+    isDragging={false}
+    transform={null}
+  />
+)

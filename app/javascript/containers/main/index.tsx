@@ -1,9 +1,11 @@
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
+  type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
@@ -26,6 +28,7 @@ import {
 } from "../../graphql/generated"
 import BacklogView from "./components/BacklogView"
 import TaskDetailModal from "./components/TaskDetailModal"
+import { TaskCardPreview } from "./components/TaskCard"
 import WeekView from "./components/WeekView"
 
 type Day = { key: string; label: string }
@@ -54,12 +57,16 @@ const MainBoard = () => {
   const [board, setBoard] = useState<TaskList[]>([])
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; taskId: string } | null>(
-    null
+    null,
   )
   const [modalOpen, setModalOpen] = useState(false)
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [activeListId, setActiveListId] = useState<string | null>(null)
   const [modalSubTasks, setModalSubTasks] = useState<SubTask[]>([])
+  const [activeDrag, setActiveDrag] = useState<{
+    taskId: string
+    variant: "backlog" | "planned"
+  } | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -103,7 +110,7 @@ const MainBoard = () => {
 
   const plannedByDay = useMemo(() => {
     const byDay: Record<string, Task[]> = Object.fromEntries(
-      WEEK_DAYS.map((day) => [day.key, [] as Task[]])
+      WEEK_DAYS.map((day) => [day.key, [] as Task[]]),
     )
     taskLists.forEach((list) => {
       list.tasks.forEach((task) => {
@@ -126,12 +133,14 @@ const MainBoard = () => {
       prev.map((list) => ({
         ...list,
         tasks: list.tasks.map((task) => (task.id === taskId ? updater(task) : task)),
-      }))
+      })),
     )
   }
 
   const removeTaskFromBoard = (taskId: string) => {
-    setBoard((prev) => prev.map((list) => ({ ...list, tasks: list.tasks.filter((t) => t.id !== taskId) })))
+    setBoard((prev) =>
+      prev.map((list) => ({ ...list, tasks: list.tasks.filter((t) => t.id !== taskId) })),
+    )
   }
 
   const moveTaskInBoard = (taskId: string, targetListId: string, targetIndex: number) => {
@@ -185,7 +194,11 @@ const MainBoard = () => {
     setModalSubTasks([])
   }
 
-  const handleSaveTask = async (payload: { title: string; description: string | null; big: boolean }) => {
+  const handleSaveTask = async (payload: {
+    title: string
+    description: string | null
+    big: boolean
+  }) => {
     if (activeTaskId) {
       await updateTask({ variables: { id: activeTaskId, ...payload } })
     } else if (activeListId) {
@@ -213,9 +226,25 @@ const MainBoard = () => {
     setContextMenu({ x: event.clientX + 8, y: event.clientY + 8, taskId })
   }
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const activeData = event.active.data.current as
+      | { type: "backlog-item"; taskId: string }
+      | { type: "planned-item"; taskId: string }
+      | undefined
+
+    if (!activeData) return
+    setActiveDrag({
+      taskId: activeData.taskId,
+      variant: activeData.type === "planned-item" ? "planned" : "backlog",
+    })
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-    if (!over) return
+    if (!over) {
+      setActiveDrag(null)
+      return
+    }
 
     const activeData = active.data.current as
       | { type: "backlog-item"; taskId: string; listId: string }
@@ -227,54 +256,65 @@ const MainBoard = () => {
       | { type: "week-column"; planned: string }
       | undefined
 
-    if (!activeData || !overData) return
-
-    if (activeData.type === "planned-item" && overData.type === "week-column") {
-      updateTaskInBoard(activeData.taskId, (task) => ({ ...task, planned: overData.planned }))
-      await setTaskPlanned({ variables: { id: activeData.taskId, planned: overData.planned } })
-      await refetch()
+    if (!activeData || !overData) {
+      setActiveDrag(null)
       return
     }
 
-    if (activeData.type !== "backlog-item") return
+    try {
+      if (activeData.type === "planned-item" && overData.type === "week-column") {
+        updateTaskInBoard(activeData.taskId, (task) => ({ ...task, planned: overData.planned }))
+        await setTaskPlanned({ variables: { id: activeData.taskId, planned: overData.planned } })
+        await refetch()
+        return
+      }
 
-    if (overData.type === "week-column") {
-      updateTaskInBoard(activeData.taskId, (task) => ({ ...task, planned: overData.planned }))
-      await setTaskPlanned({ variables: { id: activeData.taskId, planned: overData.planned } })
-      await refetch()
-      return
-    }
+      if (activeData.type !== "backlog-item") return
 
-    const sourceListId = activeData.listId
-    const targetListId = overData.type === "backlog-item" ? overData.listId : overData.listId
-    const sourceList = taskLists.find((list) => list.id === sourceListId)
-    const targetList = taskLists.find((list) => list.id === targetListId)
-    if (!sourceList || !targetList) return
+      if (overData.type === "week-column") {
+        updateTaskInBoard(activeData.taskId, (task) => ({ ...task, planned: overData.planned }))
+        await setTaskPlanned({ variables: { id: activeData.taskId, planned: overData.planned } })
+        await refetch()
+        return
+      }
 
-    const sourceIndex = sourceList.tasks.findIndex((task) => task.id === activeData.taskId)
-    let targetIndex =
-      overData.type === "backlog-item"
-        ? targetList.tasks.findIndex((task) => task.id === overData.taskId)
-        : targetList.tasks.length
+      const sourceListId = activeData.listId
+      const targetListId = overData.type === "backlog-item" ? overData.listId : overData.listId
+      const sourceList = taskLists.find((list) => list.id === sourceListId)
+      const targetList = taskLists.find((list) => list.id === targetListId)
+      if (!sourceList || !targetList) return
 
-    if (sourceListId === targetListId && sourceIndex === targetIndex) return
-    if (sourceListId === targetListId) {
-      const reordered = arrayMove(sourceList.tasks, sourceIndex, targetIndex)
-      setBoard((prev) =>
-        prev.map((list) =>
-          list.id === sourceListId
-            ? { ...list, tasks: reordered.map((task, index) => ({ ...task, position: index })) }
-            : list
+      const sourceIndex = sourceList.tasks.findIndex((task) => task.id === activeData.taskId)
+      let targetIndex =
+        overData.type === "backlog-item"
+          ? targetList.tasks.findIndex((task) => task.id === overData.taskId)
+          : targetList.tasks.length
+
+      if (sourceListId === targetListId && sourceIndex === targetIndex) return
+      if (sourceListId === targetListId) {
+        const reordered = arrayMove(sourceList.tasks, sourceIndex, targetIndex)
+        setBoard((prev) =>
+          prev.map((list) =>
+            list.id === sourceListId
+              ? { ...list, tasks: reordered.map((task, index) => ({ ...task, position: index })) }
+              : list,
+          ),
         )
-      )
-      await moveTask({ variables: { id: activeData.taskId, taskListId: sourceListId, position: targetIndex } })
-      await refetch()
-      return
-    }
+        await moveTask({
+          variables: { id: activeData.taskId, taskListId: sourceListId, position: targetIndex },
+        })
+        await refetch()
+        return
+      }
 
-    moveTaskInBoard(activeData.taskId, targetListId, targetIndex)
-    await moveTask({ variables: { id: activeData.taskId, taskListId: targetListId, position: targetIndex } })
-    await refetch()
+      moveTaskInBoard(activeData.taskId, targetListId, targetIndex)
+      await moveTask({
+        variables: { id: activeData.taskId, taskListId: targetListId, position: targetIndex },
+      })
+      await refetch()
+    } finally {
+      setActiveDrag(null)
+    }
   }
 
   const handleAddSubTask = async (title: string) => {
@@ -283,7 +323,10 @@ const MainBoard = () => {
     if (!result.data?.createSubTask) return
     const newSubTask = result.data.createSubTask
     setModalSubTasks((prev) => [...prev, newSubTask])
-    updateTaskInBoard(activeTaskId, (task) => ({ ...task, subTasks: [...task.subTasks, newSubTask] }))
+    updateTaskInBoard(activeTaskId, (task) => ({
+      ...task,
+      subTasks: [...task.subTasks, newSubTask],
+    }))
     await refetch()
   }
 
@@ -306,7 +349,9 @@ const MainBoard = () => {
   const handleSubTaskTitleBlur = async (id: string, title: string) => {
     const trimmed = title.trim()
     if (!trimmed) return
-    setModalSubTasks((prev) => prev.map((sub) => (sub.id === id ? { ...sub, title: trimmed } : sub)))
+    setModalSubTasks((prev) =>
+      prev.map((sub) => (sub.id === id ? { ...sub, title: trimmed } : sub)),
+    )
     const result = await updateSubTask({ variables: { id, title: trimmed } })
     const updated = result.data?.updateSubTask
     if (!updated || !activeTaskId) return
@@ -329,6 +374,7 @@ const MainBoard = () => {
   }
 
   const activeTask = activeTaskId ? getTask(activeTaskId) : null
+  const activeDragTask = activeDrag ? getTask(activeDrag.taskId) : null
   const activeListName = getListName(activeListId)
 
   if (loading && taskLists.length === 0) {
@@ -347,7 +393,13 @@ const MainBoard = () => {
           <DarkModeButton />
         </header>
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveDrag(null)}
+        >
           <WeekView
             days={WEEK_DAYS}
             plannedByDay={plannedByDay}
@@ -364,6 +416,11 @@ const MainBoard = () => {
             onTaskHover={setHoveredTaskId}
             onCreateTask={openNew}
           />
+          <DragOverlay>
+            {activeDrag && activeDragTask ? (
+              <TaskCardPreview task={activeDragTask} variant={activeDrag.variant} />
+            ) : null}
+          </DragOverlay>
         </DndContext>
 
         {contextMenu ? (
