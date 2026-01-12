@@ -7,8 +7,11 @@ module Types
     end
 
     def tasks(archived:)
-      scope = Task.where(task_list_id: object.id).order(:position, :id)
-      archived ? scope.where.not(archived_at: nil) : scope.where(archived_at: nil)
+      tasks = dataloader.with(Loaders::AssociationLoader, TaskList, :tasks).load(object)
+      tasks.then do |loaded|
+        filtered = archived ? loaded.select(&:archived_at?) : loaded.reject(&:archived_at?)
+        filtered.sort_by { |task| [task.position, task.id] }
+      end
     end
   end
 end

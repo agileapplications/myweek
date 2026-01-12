@@ -12,7 +12,11 @@ module Types
     field :task_list, Types::TaskListType, null: false
 
     def sub_tasks
-      object.sub_tasks.order(:id)
+      dataloader.with(Loaders::AssociationLoader, Task, :sub_tasks).load(object)
+    end
+
+    def task_list
+      dataloader.with(Loaders::AssociationLoader, Task, :task_list).load(object)
     end
   end
 end
