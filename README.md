@@ -1,24 +1,41 @@
-# README
+# Myweek
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## Setup
 
-Things you may want to cover:
+1) Install toolchain via mise:
 
-* Ruby version
+```sh
+mise install
+```
 
-* System dependencies
+2) Install Ruby gems:
 
-* Configuration
+```sh
+bundle install
+```
 
-* Database creation
+3) Install JS deps:
 
-* Database initialization
+```sh
+yarn install
+```
 
-* How to run the test suite
+4) Prepare the database:
 
-* Services (job queues, cache servers, search engines, etc.)
+```sh
+bin/rails db:prepare
+```
 
-* Deployment instructions
+## Run
 
-* ...
+1) Start Rails:
+
+```sh
+bin/rails server
+```
+
+2) In another terminal, start Vite (Solid + HMR):
+
+```sh
+yarn dev
+```
