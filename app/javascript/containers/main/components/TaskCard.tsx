@@ -13,33 +13,41 @@ type TaskCardProps = {
   onMouseLeave?: () => void
 }
 
-const TaskCard = ({
+type BaseTaskCardProps = TaskCardProps & {
+  setNodeRef: (element: HTMLElement | null) => void
+  listeners?: Record<string, unknown>
+  attributes?: Record<string, unknown>
+  isDragging: boolean
+  transform: { x: number; y: number; scaleX?: number; scaleY?: number } | null
+  transition?: string
+}
+
+const BaseTaskCard = ({
   task,
   variant,
   onClick,
   onContextMenu,
   onMouseEnter,
   onMouseLeave,
-}: TaskCardProps) => {
-  const draggableId = `${variant}-${task.id}`
+  setNodeRef,
+  listeners,
+  attributes,
+  isDragging,
+  transform,
+  transition,
+}: BaseTaskCardProps) => {
   const isBacklog = variant === "backlog"
-  const sortable = useSortable({
-    id: draggableId,
-    disabled: !isBacklog,
-    data: isBacklog ? { type: "backlog-item", taskId: task.id, listId: task.taskListId } : undefined,
-  })
-  const draggable = useDraggable({
-    id: draggableId,
-    data: !isBacklog ? { type: "planned-item", taskId: task.id } : undefined,
-    disabled: isBacklog,
-  })
+  const normalizedTransform = transform ? { ...transform, scaleX: 1, scaleY: 1 } : null
 
-  const isDragging = isBacklog ? sortable.isDragging : draggable.isDragging
-  const transform = isBacklog ? sortable.transform : draggable.transform
-  const transition = isBacklog ? sortable.transition : undefined
-  const setNodeRef = isBacklog ? sortable.setNodeRef : draggable.setNodeRef
-  const listeners = isBacklog ? sortable.listeners : draggable.listeners
-  const attributes = isBacklog ? sortable.attributes : draggable.attributes
+  const handleClick = () => {
+    if (isDragging) return
+    onClick?.()
+  }
+
+  const handleContextMenu = (event: MouseEvent) => {
+    event.preventDefault()
+    onContextMenu?.(event)
+  }
 
   const totalSubTasks = task.subTasks.length
   const doneSubTasks = task.subTasks.filter((subtask) => subtask.completed).length
@@ -64,16 +72,17 @@ const TaskCard = ({
       ref={setNodeRef}
       className={`${baseClasses} ${bigClass} ${plannedAccent}`}
       style={{
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Transform.toString(normalizedTransform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        touchAction: "none",
       }}
-      onClick={onClick}
-      onContextMenu={onContextMenu}
+      onClick={handleClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       {...attributes}
       {...listeners}
+      onContextMenu={handleContextMenu}
     >
       <div className="flex items-center justify-between gap-2">
         <span className={`task-title ${task.big ? "task-title--big" : ""}`.trim()}>
@@ -103,5 +112,46 @@ const TaskCard = ({
     </div>
   )
 }
+
+const SortableTaskCard = (props: TaskCardProps) => {
+  const sortable = useSortable({
+    id: `backlog-${props.task.id}`,
+    data: { type: "backlog-item", taskId: props.task.id, listId: props.task.taskListId },
+  })
+
+  return (
+    <BaseTaskCard
+      {...props}
+      setNodeRef={sortable.setNodeRef}
+      listeners={sortable.listeners}
+      attributes={sortable.attributes}
+      isDragging={sortable.isDragging}
+      transform={sortable.transform}
+      transition={sortable.transition}
+    />
+  )
+}
+
+const DraggableTaskCard = (props: TaskCardProps) => {
+  const draggable = useDraggable({
+    id: `planned-${props.task.id}`,
+    data: { type: "planned-item", taskId: props.task.id },
+  })
+
+  return (
+    <BaseTaskCard
+      {...props}
+      setNodeRef={draggable.setNodeRef}
+      listeners={draggable.listeners}
+      attributes={draggable.attributes}
+      isDragging={draggable.isDragging}
+      transform={draggable.transform}
+      transition={undefined}
+    />
+  )
+}
+
+const TaskCard = (props: TaskCardProps) =>
+  props.variant === "backlog" ? <SortableTaskCard {...props} /> : <DraggableTaskCard {...props} />
 
 export default TaskCard

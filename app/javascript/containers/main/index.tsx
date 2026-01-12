@@ -209,6 +209,7 @@ const MainBoard = () => {
 
   const handleContextMenu = (taskId: string, event: MouseEvent) => {
     event.preventDefault()
+    event.stopPropagation()
     setContextMenu({ x: event.clientX + 8, y: event.clientY + 8, taskId })
   }
 
