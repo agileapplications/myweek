@@ -1,0 +1,6 @@
+mutation ToggleTaskArchived($id: ID!) {
+  toggleTaskArchived(id: $id) {
+    id
+    archivedAt
+  }
+}

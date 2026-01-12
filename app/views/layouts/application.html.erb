@@ -41,6 +41,15 @@
     <div id="solid-root"></div>
     <%= yield %>
     <script type="module" src="http://localhost:5173/@vite/client"></script>
+    <% if Rails.env.development? %>
+      <script type="module">
+        import RefreshRuntime from "http://localhost:5173/@react-refresh"
+        RefreshRuntime.injectIntoGlobalHook(window)
+        window.$RefreshReg$ = () => {}
+        window.$RefreshSig$ = () => (type) => type
+        window.__vite_plugin_react_preamble_installed__ = true
+      </script>
+    <% end %>
     <script type="module" src="http://localhost:5173/app/javascript/application.tsx"></script>
   </body>
 </html>

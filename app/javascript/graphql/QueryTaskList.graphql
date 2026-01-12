@@ -1,0 +1,10 @@
+query QueryTaskList($archived: Boolean) {
+  tasks(archived: $archived) {
+    id
+    title
+    description
+    big
+    position
+    archivedAt
+  }
+}

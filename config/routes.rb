@@ -14,4 +14,10 @@ Rails.application.routes.draw do
 
   resources :tasks, only: [:create, :update]
   resources :sub_tasks, only: [:create, :update, :destroy]
+
+  post "/graphql", to: "graphql#execute"
+
+  if Rails.env.development?
+    mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql"
+  end
 end

@@ -1,0 +1,20 @@
+scalar DateTime
+
+type Task {
+  id: ID!
+  taskListId: ID!
+  title: String!
+  description: String
+  big: Boolean!
+  planned: String
+  position: Int!
+  archivedAt: DateTime
+}
+
+type Query {
+  tasks(archived: Boolean): [Task!]!
+}
+
+type Mutation {
+  toggleTaskArchived(id: ID!): Task!
+}
