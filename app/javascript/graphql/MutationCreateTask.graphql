@@ -1,0 +1,18 @@
+mutation CreateTask($taskListId: ID!, $title: String!, $description: String, $big: Boolean) {
+  createTask(taskListId: $taskListId, title: $title, description: $description, big: $big) {
+    id
+    taskListId
+    title
+    description
+    big
+    planned
+    position
+    archivedAt
+    subTasks {
+      id
+      taskId
+      title
+      completed
+    }
+  }
+}

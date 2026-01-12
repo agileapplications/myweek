@@ -1,0 +1,8 @@
+mutation UpdateSubTask($id: ID!, $title: String, $completed: Boolean) {
+  updateSubTask(id: $id, title: $title, completed: $completed) {
+    id
+    taskId
+    title
+    completed
+  }
+}

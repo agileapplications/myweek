@@ -1,0 +1,18 @@
+mutation UpdateTask($id: ID!, $title: String, $description: String, $big: Boolean) {
+  updateTask(id: $id, title: $title, description: $description, big: $big) {
+    id
+    taskListId
+    title
+    description
+    big
+    planned
+    position
+    archivedAt
+    subTasks {
+      id
+      taskId
+      title
+      completed
+    }
+  }
+}

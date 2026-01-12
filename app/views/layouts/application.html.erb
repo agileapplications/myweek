@@ -34,11 +34,9 @@
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "theme", "data-turbo-track": "reload" %>
-    <%= javascript_importmap_tags %>
   </head>
 
   <body>
-    <div id="solid-root"></div>
     <%= yield %>
     <script type="module" src="http://localhost:5173/@vite/client"></script>
     <% if Rails.env.development? %>

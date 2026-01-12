@@ -1,27 +1,17 @@
 import { ApolloClient, ApolloProvider, HttpLink, InMemoryCache } from "@apollo/client"
 import { createRoot, type Root } from "react-dom/client"
-import DarkModeButton from "./components/DarkModeButton"
-import TaskList from "./components/TaskList"
+import MainBoard from "./containers/main"
 
 const client = new ApolloClient({
   link: new HttpLink({ uri: "/graphql" }),
   cache: new InMemoryCache(),
 })
 
-const App = () => (
-  <div>
-    <h1>
-      Hello from React <DarkModeButton />
-    </h1>
-    <TaskList />
-  </div>
-)
-
 let reactRoot: Root | null = null
 let reactRootElement: HTMLElement | null = null
 
 const mount = () => {
-  const root = document.getElementById("solid-root")
+  const root = document.getElementById("app-root")
   if (!root) return
 
   if (!reactRoot || reactRootElement !== root) {
@@ -31,7 +21,7 @@ const mount = () => {
 
   reactRoot.render(
     <ApolloProvider client={client}>
-      <App />
+      <MainBoard />
     </ApolloProvider>
   )
 }
@@ -41,8 +31,6 @@ if (document.readyState === "loading") {
 } else {
   mount()
 }
-
-document.addEventListener("turbo:load", mount)
 
 if (import.meta.hot) {
   import.meta.hot.accept()

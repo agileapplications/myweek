@@ -8,5 +8,11 @@ module Types
     field :planned, String, null: true
     field :position, Integer, null: false
     field :archived_at, GraphQL::Types::ISO8601DateTime, null: true
+    field :sub_tasks, [Types::SubTaskType], null: false
+    field :task_list, Types::TaskListType, null: false
+
+    def sub_tasks
+      object.sub_tasks.order(:id)
+    end
   end
 end

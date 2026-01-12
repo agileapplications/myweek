@@ -9,12 +9,35 @@ type Task {
   planned: String
   position: Int!
   archivedAt: DateTime
+  subTasks: [SubTask!]!
+  taskList: TaskList!
+}
+
+type SubTask {
+  id: ID!
+  taskId: ID!
+  title: String!
+  completed: Boolean!
+}
+
+type TaskList {
+  id: ID!
+  name: String!
+  tasks(archived: Boolean = false): [Task!]!
 }
 
 type Query {
   tasks(archived: Boolean): [Task!]!
+  taskLists: [TaskList!]!
 }
 
 type Mutation {
+  createTask(taskListId: ID!, title: String!, description: String, big: Boolean): Task!
+  updateTask(id: ID!, title: String, description: String, big: Boolean): Task!
+  moveTask(id: ID!, taskListId: ID!, position: Int!): Task!
+  setTaskPlanned(id: ID!, planned: String): Task!
   toggleTaskArchived(id: ID!): Task!
+  createSubTask(taskId: ID!, title: String!): SubTask!
+  updateSubTask(id: ID!, title: String, completed: Boolean): SubTask!
+  deleteSubTask(id: ID!): ID!
 }

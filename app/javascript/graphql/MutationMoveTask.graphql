@@ -1,0 +1,7 @@
+mutation MoveTask($id: ID!, $taskListId: ID!, $position: Int!) {
+  moveTask(id: $id, taskListId: $taskListId, position: $position) {
+    id
+    taskListId
+    position
+  }
+}

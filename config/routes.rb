@@ -12,9 +12,6 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root "tasks#index"
 
-  resources :tasks, only: [:create, :update]
-  resources :sub_tasks, only: [:create, :update, :destroy]
-
   post "/graphql", to: "graphql#execute"
 
   if Rails.env.development?

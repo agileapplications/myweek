@@ -1,0 +1,22 @@
+query MainBoard {
+  taskLists {
+    id
+    name
+    tasks {
+      id
+      taskListId
+      title
+      description
+      big
+      planned
+      position
+      archivedAt
+      subTasks {
+        id
+        taskId
+        title
+        completed
+      }
+    }
+  }
+}

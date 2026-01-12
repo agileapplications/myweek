@@ -1,0 +1,6 @@
+mutation SetTaskPlanned($id: ID!, $planned: String) {
+  setTaskPlanned(id: $id, planned: $planned) {
+    id
+    planned
+  }
+}
