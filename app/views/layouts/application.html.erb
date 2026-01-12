@@ -38,6 +38,9 @@
   </head>
 
   <body>
+    <div id="solid-root"></div>
     <%= yield %>
+    <script type="module" src="http://localhost:5173/@vite/client"></script>
+    <script type="module" src="http://localhost:5173/app/javascript/application.tsx"></script>
   </body>
 </html>
