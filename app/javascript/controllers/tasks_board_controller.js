@@ -12,7 +12,7 @@ export default class extends Controller {
     "contextUnplan",
     "subTaskList",
     "subTaskInput",
-    "subTaskHint"
+    "subTaskHint",
   ]
 
   dragStart(event) {
@@ -43,7 +43,10 @@ export default class extends Controller {
         this.draggedCardType === "backlog" &&
         this.draggedElement.parentElement !== this.draggedParent
       ) {
-        if (this.draggedNextSibling && this.draggedNextSibling.parentElement === this.draggedParent) {
+        if (
+          this.draggedNextSibling &&
+          this.draggedNextSibling.parentElement === this.draggedParent
+        ) {
           this.draggedParent.insertBefore(this.draggedElement, this.draggedNextSibling)
         } else {
           this.draggedParent.appendChild(this.draggedElement)
@@ -98,7 +101,8 @@ export default class extends Controller {
   }
 
   openNew(event) {
-    const listId = event.currentTarget.dataset.taskListId ||
+    const listId =
+      event.currentTarget.dataset.taskListId ||
       event.currentTarget.closest("[data-task-list-id]")?.dataset.taskListId
     this.activeListId = listId
     this.editingTaskId = null
@@ -118,7 +122,7 @@ export default class extends Controller {
       "Edit Task",
       card.dataset.taskTitle,
       card.dataset.taskDescription,
-      card.dataset.taskBig === "true"
+      card.dataset.taskBig === "true",
     )
   }
 
@@ -177,34 +181,41 @@ export default class extends Controller {
       method: request.method,
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-CSRF-Token": token
+        Accept: "application/json",
+        "X-CSRF-Token": token,
       },
-      body: JSON.stringify(payload)
-    }).then((response) => {
-      if (!response.ok) {
-        return response.json().then((data) => {
-          throw new Error(data.errors?.[0] || "Failed to save task")
-        })
-      }
-      return response.json()
-    }).then((data) => {
-      if (this.editingTaskId && this.activeCard) {
-        this.applyCardUpdate(this.activeCard, data.title, data.description, data.big)
-      } else {
-        this.insertNewCard(data)
-      }
-      this.closeModal()
-    }).catch((error) => {
-      this.errorTarget.textContent = error.message || "Could not save task."
-      this.errorTarget.classList.remove("hidden")
+      body: JSON.stringify(payload),
     })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.errors?.[0] || "Failed to save task")
+          })
+        }
+        return response.json()
+      })
+      .then((data) => {
+        if (this.editingTaskId && this.activeCard) {
+          this.applyCardUpdate(this.activeCard, data.title, data.description, data.big)
+        } else {
+          this.insertNewCard(data)
+        }
+        this.closeModal()
+      })
+      .catch((error) => {
+        this.errorTarget.textContent = error.message || "Could not save task."
+        this.errorTarget.classList.remove("hidden")
+      })
   }
 
   applyCardUpdate(card, title, description, isBig) {
     const taskId = card.dataset.taskId
-    const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
-    const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
+    const backlogCard = this.element.querySelector(
+      `[data-task-id="${taskId}"][data-card-type="backlog"]`,
+    )
+    const plannedCard = this.element.querySelector(
+      `[data-task-id="${taskId}"][data-card-type="planned"]`,
+    )
 
     if (backlogCard) {
       const plannedAccent = !!backlogCard.dataset.taskPlanned
@@ -244,14 +255,16 @@ export default class extends Controller {
     const checkbox = document.createElement("input")
     checkbox.type = "checkbox"
     checkbox.checked = !!subTask.completed
-    checkbox.className = "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-950"
+    checkbox.className =
+      "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-950"
     checkbox.dataset.subTaskId = subTask.id
     checkbox.dataset.action = "change->tasks-board#toggleSubTask"
 
     const input = document.createElement("input")
     input.type = "text"
     input.value = subTask.title
-    input.className = "w-full rounded-md border border-transparent px-2 py-1 text-sm text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none dark:text-slate-100 dark:hover:border-slate-700"
+    input.className =
+      "w-full rounded-md border border-transparent px-2 py-1 text-sm text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none dark:text-slate-100 dark:hover:border-slate-700"
     input.dataset.subTaskId = subTask.id
     input.dataset.action = "blur->tasks-board#saveSubTask keydown->tasks-board#subTaskKeydown"
 
@@ -286,20 +299,22 @@ export default class extends Controller {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-CSRF-Token": token
+        Accept: "application/json",
+        "X-CSRF-Token": token,
       },
-      body: JSON.stringify({ sub_task: { task_id: this.editingTaskId, title: title } })
-    }).then((response) => {
-      if (!response.ok) throw new Error("Failed to add subtask")
-      return response.json()
-    }).then((data) => {
-      this.currentSubTasks = this.currentSubTasks || []
-      this.currentSubTasks.push(data)
-      this.subTaskInputTarget.value = ""
-      this.renderSubTasks()
-      this.syncSubTaskData(data.task_id, this.currentSubTasks)
+      body: JSON.stringify({ sub_task: { task_id: this.editingTaskId, title: title } }),
     })
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to add subtask")
+        return response.json()
+      })
+      .then((data) => {
+        this.currentSubTasks = this.currentSubTasks || []
+        this.currentSubTasks.push(data)
+        this.subTaskInputTarget.value = ""
+        this.renderSubTasks()
+        this.syncSubTaskData(data.task_id, this.currentSubTasks)
+      })
   }
 
   toggleSubTask(event) {
@@ -332,12 +347,14 @@ export default class extends Controller {
     fetch(`/sub_tasks/${subTaskId}`, {
       method: "DELETE",
       headers: {
-        "Accept": "application/json",
-        "X-CSRF-Token": token
-      }
+        Accept: "application/json",
+        "X-CSRF-Token": token,
+      },
     }).then((response) => {
       if (!response.ok) throw new Error("Failed to delete subtask")
-      this.currentSubTasks = (this.currentSubTasks || []).filter((sub) => String(sub.id) !== String(subTaskId))
+      this.currentSubTasks = (this.currentSubTasks || []).filter(
+        (sub) => String(sub.id) !== String(subTaskId),
+      )
       this.renderSubTasks()
       if (this.editingTaskId) {
         this.syncSubTaskData(this.editingTaskId, this.currentSubTasks)
@@ -351,20 +368,22 @@ export default class extends Controller {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-CSRF-Token": token
+        Accept: "application/json",
+        "X-CSRF-Token": token,
       },
-      body: JSON.stringify({ sub_task: updates })
-    }).then((response) => {
-      if (!response.ok) throw new Error("Failed to update subtask")
-      return response.json()
-    }).then((data) => {
-      this.currentSubTasks = (this.currentSubTasks || []).map((sub) => {
-        return String(sub.id) === String(subTaskId) ? data : sub
-      })
-      this.renderSubTasks()
-      this.syncSubTaskData(data.task_id, this.currentSubTasks)
+      body: JSON.stringify({ sub_task: updates }),
     })
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to update subtask")
+        return response.json()
+      })
+      .then((data) => {
+        this.currentSubTasks = (this.currentSubTasks || []).map((sub) => {
+          return String(sub.id) === String(subTaskId) ? data : sub
+        })
+        this.renderSubTasks()
+        this.syncSubTaskData(data.task_id, this.currentSubTasks)
+      })
   }
 
   findSubTask(subTaskId) {
@@ -440,7 +459,8 @@ export default class extends Controller {
 
   buildCardElement(data) {
     const card = document.createElement("div")
-    card.className = "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing"
+    card.className =
+      "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm cursor-grab active:cursor-grabbing"
     card.setAttribute("draggable", "true")
     card.dataset.cardType = "backlog"
     card.dataset.taskId = data.id
@@ -452,7 +472,8 @@ export default class extends Controller {
     card.dataset.subTasks = "[]"
     card.dataset.subtaskTotal = 0
     card.dataset.subtaskDone = 0
-    card.dataset.action = "dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard click->tasks-board#openEditFromClick contextmenu->tasks-board#openContextMenu"
+    card.dataset.action =
+      "dragstart->tasks-board#dragStart dragend->tasks-board#dragEnd mouseenter->tasks-board#hoverCard mouseleave->tasks-board#leaveCard click->tasks-board#openEditFromClick contextmenu->tasks-board#openContextMenu"
     if (data.big) {
       card.classList.add("task-card--big")
     }
@@ -563,29 +584,33 @@ export default class extends Controller {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-CSRF-Token": token
+        Accept: "application/json",
+        "X-CSRF-Token": token,
       },
-      body: JSON.stringify({ task: { archived_at: new Date().toISOString() } })
-    }).then((response) => {
-      if (!response.ok) throw new Error("Failed to archive task")
-      card.remove()
-      const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
-      if (plannedCard) {
-        plannedCard.remove()
-      }
-      this.hoveredCard = null
-    }).catch(() => {
-      card.classList.remove("hidden")
-      if (parent) {
-        if (nextSibling && nextSibling.parentElement === parent) {
-          parent.insertBefore(card, nextSibling)
-        } else {
-          parent.appendChild(card)
-        }
-      }
-      this.adjustCount(listId, 1)
+      body: JSON.stringify({ task: { archived_at: new Date().toISOString() } }),
     })
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to archive task")
+        card.remove()
+        const plannedCard = this.element.querySelector(
+          `[data-task-id="${taskId}"][data-card-type="planned"]`,
+        )
+        if (plannedCard) {
+          plannedCard.remove()
+        }
+        this.hoveredCard = null
+      })
+      .catch(() => {
+        card.classList.remove("hidden")
+        if (parent) {
+          if (nextSibling && nextSibling.parentElement === parent) {
+            parent.insertBefore(card, nextSibling)
+          } else {
+            parent.appendChild(card)
+          }
+        }
+        this.adjustCount(listId, 1)
+      })
   }
 
   allowDrop(event) {
@@ -646,7 +671,9 @@ export default class extends Controller {
       targetContainer.appendChild(taskElement)
     }
 
-    const targetPosition = Array.from(targetContainer.querySelectorAll("[data-task-id]")).indexOf(taskElement)
+    const targetPosition = Array.from(targetContainer.querySelectorAll("[data-task-id]")).indexOf(
+      taskElement,
+    )
     taskElement.dataset.taskListId = targetListId
     taskElement.classList.remove("hidden")
 
@@ -661,7 +688,7 @@ export default class extends Controller {
       taskElement,
       previousContainer,
       previousListId,
-      this.draggedNextSibling
+      this.draggedNextSibling,
     )
   }
 
@@ -676,7 +703,7 @@ export default class extends Controller {
     placeholder.classList.remove("hidden")
 
     const cards = Array.from(container.querySelectorAll("[data-task-id]")).filter(
-      (card) => card !== this.draggedElement
+      (card) => card !== this.draggedElement,
     )
     const y = event.clientY
     let insertBefore = null
@@ -717,7 +744,9 @@ export default class extends Controller {
   }
 
   findCountElement(listId) {
-    return this.element.querySelector(`[data-task-list-id="${listId}"] [data-tasks-board-target="count"]`)
+    return this.element.querySelector(
+      `[data-task-list-id="${listId}"] [data-tasks-board-target="count"]`,
+    )
   }
 
   readCount(element) {
@@ -730,33 +759,43 @@ export default class extends Controller {
     element.textContent = `${safeCount} ${safeCount === 1 ? "task" : "tasks"}`
   }
 
-  updateTask(taskId, targetListId, targetPosition, taskElement, previousContainer, previousListId, previousNextSibling) {
+  updateTask(
+    taskId,
+    targetListId,
+    targetPosition,
+    taskElement,
+    previousContainer,
+    previousListId,
+    previousNextSibling,
+  ) {
     const token = document.querySelector("meta[name='csrf-token']").content
 
     fetch(`/tasks/${taskId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-CSRF-Token": token
+        Accept: "application/json",
+        "X-CSRF-Token": token,
       },
-      body: JSON.stringify({ task: { task_list_id: targetListId, position: targetPosition } })
-    }).then((response) => {
-      if (!response.ok) throw new Error("Failed to update task list")
-    }).catch(() => {
-      if (previousContainer) {
-        if (previousNextSibling && previousNextSibling.parentElement === previousContainer) {
-          previousContainer.insertBefore(taskElement, previousNextSibling)
-        } else {
-          previousContainer.appendChild(taskElement)
-        }
-      }
-      taskElement.dataset.taskListId = previousListId
-      taskElement.classList.remove("hidden")
-      if (previousListId !== targetListId) {
-        this.updateCounts(targetListId, previousListId, 1)
-      }
+      body: JSON.stringify({ task: { task_list_id: targetListId, position: targetPosition } }),
     })
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to update task list")
+      })
+      .catch(() => {
+        if (previousContainer) {
+          if (previousNextSibling && previousNextSibling.parentElement === previousContainer) {
+            previousContainer.insertBefore(taskElement, previousNextSibling)
+          } else {
+            previousContainer.appendChild(taskElement)
+          }
+        }
+        taskElement.dataset.taskListId = previousListId
+        taskElement.classList.remove("hidden")
+        if (previousListId !== targetListId) {
+          this.updateCounts(targetListId, previousListId, 1)
+        }
+      })
   }
 
   allowDropWeek(event) {
@@ -796,7 +835,9 @@ export default class extends Controller {
       placeholder.classList.add("hidden")
     }
 
-    const taskElement = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+    const taskElement = this.element.querySelector(
+      `[data-task-id="${taskId}"][data-card-type="backlog"]`,
+    )
     const previousPlanned = taskElement?.dataset.taskPlanned || null
     if (taskElement) {
       taskElement.classList.remove("hidden")
@@ -826,7 +867,9 @@ export default class extends Controller {
       return
     }
 
-    const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+    const backlogCard = this.element.querySelector(
+      `[data-task-id="${taskId}"][data-card-type="backlog"]`,
+    )
     if (!backlogCard) return
 
     card = this.buildPlannedCardFromBacklog(backlogCard)
@@ -852,43 +895,53 @@ export default class extends Controller {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-CSRF-Token": token
+        Accept: "application/json",
+        "X-CSRF-Token": token,
       },
-      body: JSON.stringify({ task: { planned: plannedValue } })
-    }).then((response) => {
-      if (!response.ok) throw new Error("Failed to update planned day")
-    }).catch(() => {
-      const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
-      if (backlogCard) {
-        if (previousPlanned) {
-          backlogCard.dataset.taskPlanned = previousPlanned
-          this.setBacklogPlannedStyles(backlogCard, true)
-        } else {
-          backlogCard.dataset.taskPlanned = ""
-          this.setBacklogPlannedStyles(backlogCard, false)
-        }
-      }
-      const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
-      if (plannedCard) {
-        if (previousPlanned) {
-          this.upsertPlannedCard(taskId, previousPlanned)
-        } else {
-          plannedCard.remove()
-        }
-      }
+      body: JSON.stringify({ task: { planned: plannedValue } }),
     })
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to update planned day")
+      })
+      .catch(() => {
+        const backlogCard = this.element.querySelector(
+          `[data-task-id="${taskId}"][data-card-type="backlog"]`,
+        )
+        if (backlogCard) {
+          if (previousPlanned) {
+            backlogCard.dataset.taskPlanned = previousPlanned
+            this.setBacklogPlannedStyles(backlogCard, true)
+          } else {
+            backlogCard.dataset.taskPlanned = ""
+            this.setBacklogPlannedStyles(backlogCard, false)
+          }
+        }
+        const plannedCard = this.element.querySelector(
+          `[data-task-id="${taskId}"][data-card-type="planned"]`,
+        )
+        if (plannedCard) {
+          if (previousPlanned) {
+            this.upsertPlannedCard(taskId, previousPlanned)
+          } else {
+            plannedCard.remove()
+          }
+        }
+      })
   }
 
   unplanCard(card) {
     const taskId = card.dataset.taskId
     const previousPlanned = card.dataset.taskPlanned || null
-    const backlogCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="backlog"]`)
+    const backlogCard = this.element.querySelector(
+      `[data-task-id="${taskId}"][data-card-type="backlog"]`,
+    )
     if (backlogCard) {
       backlogCard.dataset.taskPlanned = ""
       this.setBacklogPlannedStyles(backlogCard, false)
     }
-    const plannedCard = this.element.querySelector(`[data-task-id="${taskId}"][data-card-type="planned"]`)
+    const plannedCard = this.element.querySelector(
+      `[data-task-id="${taskId}"][data-card-type="planned"]`,
+    )
     if (plannedCard) {
       plannedCard.remove()
     }
@@ -983,8 +1036,10 @@ export default class extends Controller {
   }
 
   clearPlaceholders() {
-    this.element.querySelectorAll("[data-tasks-board-target='placeholder']").forEach((placeholder) => {
-      placeholder.classList.add("hidden")
-    })
+    this.element
+      .querySelectorAll("[data-tasks-board-target='placeholder']")
+      .forEach((placeholder) => {
+        placeholder.classList.add("hidden")
+      })
   }
 }
