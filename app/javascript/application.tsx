@@ -4,7 +4,7 @@ import MainBoard from "./containers/main"
 
 const client = new ApolloClient({
   link: new HttpLink({ uri: "/graphql" }),
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache()
 })
 
 let reactRoot: Root | null = null
