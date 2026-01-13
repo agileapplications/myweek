@@ -19,7 +19,7 @@ export type Scalars = {
 };
 
 export type Mutation = {
-  __typename?: 'Mutation';
+  __typename: 'Mutation';
   createSubTask: SubTask;
   createTask: Task;
   deleteSubTask: Scalars['ID']['output'];
@@ -83,7 +83,7 @@ export type MutationUpdateTaskArgs = {
 };
 
 export type Query = {
-  __typename?: 'Query';
+  __typename: 'Query';
   taskLists: Array<TaskList>;
   tasks: Array<Task>;
 };
@@ -94,7 +94,7 @@ export type QueryTasksArgs = {
 };
 
 export type SubTask = {
-  __typename?: 'SubTask';
+  __typename: 'SubTask';
   completed: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
   taskId: Scalars['ID']['output'];
@@ -102,7 +102,7 @@ export type SubTask = {
 };
 
 export type Task = {
-  __typename?: 'Task';
+  __typename: 'Task';
   archivedAt?: Maybe<Scalars['DateTime']['output']>;
   big: Scalars['Boolean']['output'];
   description?: Maybe<Scalars['String']['output']>;
@@ -116,7 +116,7 @@ export type Task = {
 };
 
 export type TaskList = {
-  __typename?: 'TaskList';
+  __typename: 'TaskList';
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   tasks: Array<Task>;
@@ -133,7 +133,7 @@ export type CreateSubTaskMutationVariables = Exact<{
 }>;
 
 
-export type CreateSubTaskMutation = { __typename?: 'Mutation', createSubTask: { __typename?: 'SubTask', id: string, taskId: string, title: string, completed: boolean } };
+export type CreateSubTaskMutation = { __typename: 'Mutation', createSubTask: { __typename: 'SubTask', id: string, taskId: string, title: string, completed: boolean } };
 
 export type CreateTaskMutationVariables = Exact<{
   taskListId: Scalars['ID']['input'];
@@ -143,14 +143,14 @@ export type CreateTaskMutationVariables = Exact<{
 }>;
 
 
-export type CreateTaskMutation = { __typename?: 'Mutation', createTask: { __typename?: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename?: 'SubTask', id: string, taskId: string, title: string, completed: boolean }> } };
+export type CreateTaskMutation = { __typename: 'Mutation', createTask: { __typename: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename: 'SubTask', id: string, taskId: string, title: string, completed: boolean }> } };
 
 export type DeleteSubTaskMutationVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type DeleteSubTaskMutation = { __typename?: 'Mutation', deleteSubTask: string };
+export type DeleteSubTaskMutation = { __typename: 'Mutation', deleteSubTask: string };
 
 export type MoveTaskMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -159,7 +159,7 @@ export type MoveTaskMutationVariables = Exact<{
 }>;
 
 
-export type MoveTaskMutation = { __typename?: 'Mutation', moveTask: { __typename?: 'Task', id: string, taskListId: string, position: number } };
+export type MoveTaskMutation = { __typename: 'Mutation', moveTask: { __typename: 'Task', id: string, taskListId: string, position: number } };
 
 export type SetTaskPlannedMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -167,14 +167,14 @@ export type SetTaskPlannedMutationVariables = Exact<{
 }>;
 
 
-export type SetTaskPlannedMutation = { __typename?: 'Mutation', setTaskPlanned: { __typename?: 'Task', id: string, planned?: string | null } };
+export type SetTaskPlannedMutation = { __typename: 'Mutation', setTaskPlanned: { __typename: 'Task', id: string, planned?: string | null } };
 
 export type ToggleTaskArchivedMutationVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type ToggleTaskArchivedMutation = { __typename?: 'Mutation', toggleTaskArchived: { __typename?: 'Task', id: string, archivedAt?: any | null } };
+export type ToggleTaskArchivedMutation = { __typename: 'Mutation', toggleTaskArchived: { __typename: 'Task', id: string, archivedAt?: any | null } };
 
 export type UpdateSubTaskMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -183,7 +183,7 @@ export type UpdateSubTaskMutationVariables = Exact<{
 }>;
 
 
-export type UpdateSubTaskMutation = { __typename?: 'Mutation', updateSubTask: { __typename?: 'SubTask', id: string, taskId: string, title: string, completed: boolean } };
+export type UpdateSubTaskMutation = { __typename: 'Mutation', updateSubTask: { __typename: 'SubTask', id: string, taskId: string, title: string, completed: boolean } };
 
 export type UpdateTaskMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -193,12 +193,12 @@ export type UpdateTaskMutationVariables = Exact<{
 }>;
 
 
-export type UpdateTaskMutation = { __typename?: 'Mutation', updateTask: { __typename?: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename?: 'SubTask', id: string, taskId: string, title: string, completed: boolean }> } };
+export type UpdateTaskMutation = { __typename: 'Mutation', updateTask: { __typename: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename: 'SubTask', id: string, taskId: string, title: string, completed: boolean }> } };
 
 export type MainBoardQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MainBoardQuery = { __typename?: 'Query', taskLists: Array<{ __typename?: 'TaskList', id: string, name: string, tasks: Array<{ __typename?: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename?: 'SubTask', id: string, taskId: string, title: string, completed: boolean }> }> }> };
+export type MainBoardQuery = { __typename: 'Query', taskLists: Array<{ __typename: 'TaskList', id: string, name: string, tasks: Array<{ __typename: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename: 'SubTask', id: string, taskId: string, title: string, completed: boolean }> }> }> };
 
 
 export const CreateSubTaskDocument = gql`

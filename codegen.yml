@@ -7,5 +7,7 @@ generates:
       - typescript-operations
       - typescript-react-apollo
     config:
+      addTypename: true
+      nonOptionalTypename: true
       withHooks: true
       reactApolloVersion: 3
