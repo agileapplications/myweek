@@ -1,0 +1,25 @@
+query SearchTasks($query: String!, $limit: Int!, $offset: Int!) {
+  searchTasks(query: $query, limit: $limit, offset: $offset, includeArchived: true) {
+    totalCount
+    tasks {
+      id
+      taskListId
+      title
+      description
+      big
+      planned
+      position
+      archivedAt
+      subTasks {
+        id
+        taskId
+        title
+        completed
+      }
+      taskList {
+        id
+        name
+      }
+    }
+  }
+}

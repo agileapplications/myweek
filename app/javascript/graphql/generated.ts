@@ -96,8 +96,17 @@ export type MutationUpdateTaskArgs = {
 
 export type Query = {
   __typename: 'Query';
+  searchTasks: TaskSearchResult;
   taskLists: Array<TaskList>;
   tasks: Array<Task>;
+};
+
+
+export type QuerySearchTasksArgs = {
+  includeArchived?: InputMaybe<Scalars['Boolean']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  query: Scalars['String']['input'];
 };
 
 
@@ -137,6 +146,12 @@ export type TaskList = {
 
 export type TaskListTasksArgs = {
   archived?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type TaskSearchResult = {
+  __typename: 'TaskSearchResult';
+  tasks: Array<Task>;
+  totalCount: Scalars['Int']['output'];
 };
 
 export type CreateSubTaskMutationVariables = Exact<{
@@ -225,6 +240,15 @@ export type MainBoardQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type MainBoardQuery = { __typename: 'Query', taskLists: Array<{ __typename: 'TaskList', id: string, name: string, tasks: Array<{ __typename: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename: 'SubTask', id: string, taskId: string, title: string, completed: boolean }> }> }> };
+
+export type SearchTasksQueryVariables = Exact<{
+  query: Scalars['String']['input'];
+  limit: Scalars['Int']['input'];
+  offset: Scalars['Int']['input'];
+}>;
+
+
+export type SearchTasksQuery = { __typename: 'Query', searchTasks: { __typename: 'TaskSearchResult', totalCount: number, tasks: Array<{ __typename: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename: 'SubTask', id: string, taskId: string, title: string, completed: boolean }>, taskList: { __typename: 'TaskList', id: string, name: string } }> } };
 
 
 export const CreateSubTaskDocument = gql`
@@ -666,3 +690,73 @@ export type MainBoardQueryHookResult = ReturnType<typeof useMainBoardQuery>;
 export type MainBoardLazyQueryHookResult = ReturnType<typeof useMainBoardLazyQuery>;
 export type MainBoardSuspenseQueryHookResult = ReturnType<typeof useMainBoardSuspenseQuery>;
 export type MainBoardQueryResult = Apollo.QueryResult<MainBoardQuery, MainBoardQueryVariables>;
+export const SearchTasksDocument = gql`
+    query SearchTasks($query: String!, $limit: Int!, $offset: Int!) {
+  searchTasks(
+    query: $query
+    limit: $limit
+    offset: $offset
+    includeArchived: true
+  ) {
+    totalCount
+    tasks {
+      id
+      taskListId
+      title
+      description
+      big
+      planned
+      position
+      archivedAt
+      subTasks {
+        id
+        taskId
+        title
+        completed
+      }
+      taskList {
+        id
+        name
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useSearchTasksQuery__
+ *
+ * To run a query within a React component, call `useSearchTasksQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchTasksQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSearchTasksQuery({
+ *   variables: {
+ *      query: // value for 'query'
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
+ *   },
+ * });
+ */
+export function useSearchTasksQuery(baseOptions: Apollo.QueryHookOptions<SearchTasksQuery, SearchTasksQueryVariables> & ({ variables: SearchTasksQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SearchTasksQuery, SearchTasksQueryVariables>(SearchTasksDocument, options);
+      }
+export function useSearchTasksLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SearchTasksQuery, SearchTasksQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SearchTasksQuery, SearchTasksQueryVariables>(SearchTasksDocument, options);
+        }
+// @ts-ignore
+export function useSearchTasksSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<SearchTasksQuery, SearchTasksQueryVariables>): Apollo.UseSuspenseQueryResult<SearchTasksQuery, SearchTasksQueryVariables>;
+export function useSearchTasksSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<SearchTasksQuery, SearchTasksQueryVariables>): Apollo.UseSuspenseQueryResult<SearchTasksQuery | undefined, SearchTasksQueryVariables>;
+export function useSearchTasksSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<SearchTasksQuery, SearchTasksQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<SearchTasksQuery, SearchTasksQueryVariables>(SearchTasksDocument, options);
+        }
+export type SearchTasksQueryHookResult = ReturnType<typeof useSearchTasksQuery>;
+export type SearchTasksLazyQueryHookResult = ReturnType<typeof useSearchTasksLazyQuery>;
+export type SearchTasksSuspenseQueryHookResult = ReturnType<typeof useSearchTasksSuspenseQuery>;
+export type SearchTasksQueryResult = Apollo.QueryResult<SearchTasksQuery, SearchTasksQueryVariables>;
