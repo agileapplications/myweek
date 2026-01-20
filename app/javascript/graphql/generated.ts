@@ -22,6 +22,7 @@ export type Mutation = {
   __typename: 'Mutation';
   createSubTask: SubTask;
   createTask: Task;
+  createTaskList: TaskList;
   deleteSubTask: Scalars['ID']['output'];
   deleteTaskList: Scalars['ID']['output'];
   moveTask: Task;
@@ -43,6 +44,11 @@ export type MutationCreateTaskArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   taskListId: Scalars['ID']['input'];
   title: Scalars['String']['input'];
+};
+
+
+export type MutationCreateTaskListArgs = {
+  name: Scalars['String']['input'];
 };
 
 
@@ -150,6 +156,13 @@ export type CreateTaskMutationVariables = Exact<{
 
 
 export type CreateTaskMutation = { __typename: 'Mutation', createTask: { __typename: 'Task', id: string, taskListId: string, title: string, description?: string | null, big: boolean, planned?: string | null, position: number, archivedAt?: any | null, subTasks: Array<{ __typename: 'SubTask', id: string, taskId: string, title: string, completed: boolean }> } };
+
+export type CreateTaskListMutationVariables = Exact<{
+  name: Scalars['String']['input'];
+}>;
+
+
+export type CreateTaskListMutation = { __typename: 'Mutation', createTaskList: { __typename: 'TaskList', id: string, name: string } };
 
 export type DeleteSubTaskMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -305,6 +318,40 @@ export function useCreateTaskMutation(baseOptions?: Apollo.MutationHookOptions<C
 export type CreateTaskMutationHookResult = ReturnType<typeof useCreateTaskMutation>;
 export type CreateTaskMutationResult = Apollo.MutationResult<CreateTaskMutation>;
 export type CreateTaskMutationOptions = Apollo.BaseMutationOptions<CreateTaskMutation, CreateTaskMutationVariables>;
+export const CreateTaskListDocument = gql`
+    mutation CreateTaskList($name: String!) {
+  createTaskList(name: $name) {
+    id
+    name
+  }
+}
+    `;
+export type CreateTaskListMutationFn = Apollo.MutationFunction<CreateTaskListMutation, CreateTaskListMutationVariables>;
+
+/**
+ * __useCreateTaskListMutation__
+ *
+ * To run a mutation, you first call `useCreateTaskListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateTaskListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createTaskListMutation, { data, loading, error }] = useCreateTaskListMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useCreateTaskListMutation(baseOptions?: Apollo.MutationHookOptions<CreateTaskListMutation, CreateTaskListMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateTaskListMutation, CreateTaskListMutationVariables>(CreateTaskListDocument, options);
+      }
+export type CreateTaskListMutationHookResult = ReturnType<typeof useCreateTaskListMutation>;
+export type CreateTaskListMutationResult = Apollo.MutationResult<CreateTaskListMutation>;
+export type CreateTaskListMutationOptions = Apollo.BaseMutationOptions<CreateTaskListMutation, CreateTaskListMutationVariables>;
 export const DeleteSubTaskDocument = gql`
     mutation DeleteSubTask($id: ID!) {
   deleteSubTask(id: $id)

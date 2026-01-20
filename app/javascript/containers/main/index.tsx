@@ -15,6 +15,7 @@ import DarkModeButton from "../../components/DarkModeButton"
 import {
   useCreateSubTaskMutation,
   useCreateTaskMutation,
+  useCreateTaskListMutation,
   useDeleteTaskListMutation,
   useDeleteSubTaskMutation,
   useMainBoardQuery,
@@ -27,6 +28,7 @@ import {
   type Task,
   type TaskList,
 } from "../../graphql/generated"
+import Modal from "../../components/Modal"
 import BacklogView from "./components/BacklogView"
 import TaskDetailModal from "./components/TaskDetailModal"
 import { TaskCardPreview } from "./components/TaskCard"
@@ -47,6 +49,7 @@ const WEEK_DAYS: Day[] = [
 const MainBoard = () => {
   const { data, loading, error, refetch } = useMainBoardQuery()
   const [createTask] = useCreateTaskMutation()
+  const [createTaskList] = useCreateTaskListMutation()
   const [updateTask] = useUpdateTaskMutation()
   const [moveTask] = useMoveTaskMutation()
   const [setTaskPlanned] = useSetTaskPlannedMutation()
@@ -62,6 +65,8 @@ const MainBoard = () => {
     null,
   )
   const [modalOpen, setModalOpen] = useState(false)
+  const [listModalOpen, setListModalOpen] = useState(false)
+  const [listName, setListName] = useState("")
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [activeListId, setActiveListId] = useState<string | null>(null)
   const [modalSubTasks, setModalSubTasks] = useState<SubTask[]>([])
@@ -200,6 +205,11 @@ const MainBoard = () => {
     setModalSubTasks([])
   }
 
+  const closeListModal = () => {
+    setListModalOpen(false)
+    setListName("")
+  }
+
   const handleSaveTask = async (payload: {
     title: string
     description: string | null
@@ -239,6 +249,19 @@ const MainBoard = () => {
     }
     await deleteTaskList({ variables: { id: listId } })
     await refetch()
+  }
+
+  const openCreateList = () => {
+    setListName("")
+    setListModalOpen(true)
+  }
+
+  const handleCreateList = async () => {
+    const trimmed = listName.trim()
+    if (!trimmed) return
+    await createTaskList({ variables: { name: trimmed } })
+    await refetch()
+    closeListModal()
   }
 
   const handleContextMenu = (taskId: string, event: MouseEvent) => {
@@ -437,6 +460,7 @@ const MainBoard = () => {
             onTaskHover={setHoveredTaskId}
             onCreateTask={openNew}
             onDeleteList={handleDeleteList}
+            onCreateList={openCreateList}
           />
           <DragOverlay>
             {activeDrag && activeDragTask ? (
@@ -498,6 +522,51 @@ const MainBoard = () => {
           onSubTaskTitleBlur={handleSubTaskTitleBlur}
           onDeleteSubTask={handleDeleteSubTask}
         />
+
+        <Modal open={listModalOpen} onClose={closeListModal}>
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                New Task List
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">Give your list a short name.</p>
+            </div>
+            <form
+              className="space-y-4"
+              onSubmit={async (event) => {
+                event.preventDefault()
+                await handleCreateList()
+              }}
+            >
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                Title
+                <input
+                  type="text"
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-800"
+                  value={listName}
+                  onChange={(event) => setListName(event.target.value)}
+                  autoFocus
+                />
+              </label>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                  onClick={closeListModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+                  disabled={!listName.trim()}
+                >
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </Modal>
       </div>
     </main>
   )

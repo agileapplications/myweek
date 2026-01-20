@@ -14,6 +14,10 @@ module Types
       argument :big, Boolean, required: false
     end
 
+    field :create_task_list, Types::TaskListType, null: false do
+      argument :name, String, required: true
+    end
+
     field :move_task, Types::TaskType, null: false do
       argument :id, ID, required: true
       argument :task_list_id, ID, required: true
@@ -68,6 +72,10 @@ module Types
       updates[:big] = big unless big.nil?
       task.update!(updates) if updates.any?
       task
+    end
+
+    def create_task_list(name:)
+      TaskList.create!(name: name)
     end
 
     def move_task(id:, task_list_id:, position:)

@@ -32,6 +32,7 @@ type Query {
 }
 
 type Mutation {
+  createTaskList(name: String!): TaskList!
   createTask(taskListId: ID!, title: String!, description: String, big: Boolean): Task!
   updateTask(id: ID!, title: String, description: String, big: Boolean): Task!
   moveTask(id: ID!, taskListId: ID!, position: Int!): Task!
