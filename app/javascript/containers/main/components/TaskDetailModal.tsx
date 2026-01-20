@@ -1,5 +1,5 @@
 import type { FormEvent } from "react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Modal from "../../../components/Modal"
 import type { SubTask } from "../../../graphql/generated"
 import SubTasks from "./SubTasks"
@@ -42,6 +42,7 @@ const TaskDetailModal = ({
   const [big, setBig] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("")
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   const isEditing = !!task
   const modalTitle = useMemo(() => (isEditing ? "Edit Task" : "New Task"), [isEditing])
@@ -54,6 +55,26 @@ const TaskDetailModal = ({
     setError(null)
     setNewSubTaskTitle("")
   }, [open, task])
+
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose()
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [onClose, open])
+
+  useEffect(() => {
+    if (!open) return
+    const handle = window.setTimeout(() => {
+      titleInputRef.current?.focus()
+      titleInputRef.current?.select()
+    }, 0)
+    return () => window.clearTimeout(handle)
+  }, [open])
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -97,6 +118,7 @@ const TaskDetailModal = ({
             required
             value={title}
             onChange={(event) => setTitle(event.currentTarget.value)}
+            ref={titleInputRef}
             className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
         </div>
