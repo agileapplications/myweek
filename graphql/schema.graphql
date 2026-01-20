@@ -26,9 +26,15 @@ type TaskList {
   tasks(archived: Boolean = false): [Task!]!
 }
 
+type TaskSearchResult {
+  totalCount: Int!
+  tasks: [Task!]!
+}
+
 type Query {
   tasks(archived: Boolean): [Task!]!
   taskLists: [TaskList!]!
+  searchTasks(query: String!, limit: Int = 10, offset: Int = 0, includeArchived: Boolean = true): TaskSearchResult!
 }
 
 type Mutation {

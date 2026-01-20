@@ -9,9 +9,9 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { gql, useQuery } from "@apollo/client"
+import { gql, useLazyQuery } from "@apollo/client"
 import type { MouseEvent } from "react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import DarkModeButton from "../../components/DarkModeButton"
 import {
   useCreateSubTaskMutation,
@@ -47,6 +47,8 @@ const WEEK_DAYS: Day[] = [
   { key: "next_week", label: "Next Week" },
 ]
 
+const SEARCH_PAGE_SIZE = 10
+
 type TaskSearchTask = {
   id: string
   taskListId: string
@@ -63,51 +65,38 @@ type TaskSearchTask = {
   }
 }
 
-type TaskSearchData = {
-  activeTasks: TaskSearchTask[]
-  archivedTasks: TaskSearchTask[]
+type TaskSearchResult = {
+  totalCount: number
+  tasks: TaskSearchTask[]
 }
 
-const TASK_SEARCH_QUERY = gql`
-  query TaskSearch {
-    activeTasks: tasks(archived: false) {
-      id
-      taskListId
-      title
-      description
-      big
-      planned
-      position
-      archivedAt
-      subTasks {
+type TaskSearchData = {
+  searchTasks: TaskSearchResult
+}
+
+const SEARCH_TASKS_QUERY = gql`
+  query SearchTasks($query: String!, $limit: Int!, $offset: Int!) {
+    searchTasks(query: $query, limit: $limit, offset: $offset, includeArchived: true) {
+      totalCount
+      tasks {
         id
-        taskId
+        taskListId
         title
-        completed
-      }
-      taskList {
-        id
-        name
-      }
-    }
-    archivedTasks: tasks(archived: true) {
-      id
-      taskListId
-      title
-      description
-      big
-      planned
-      position
-      archivedAt
-      subTasks {
-        id
-        taskId
-        title
-        completed
-      }
-      taskList {
-        id
-        name
+        description
+        big
+        planned
+        position
+        archivedAt
+        subTasks {
+          id
+          taskId
+          title
+          completed
+        }
+        taskList {
+          id
+          name
+        }
       }
     }
   }
@@ -115,7 +104,10 @@ const TASK_SEARCH_QUERY = gql`
 
 const MainBoard = () => {
   const { data, loading, error, refetch } = useMainBoardQuery()
-  const { data: searchData, refetch: refetchSearch } = useQuery<TaskSearchData>(TASK_SEARCH_QUERY)
+  const [runSearch, { loading: searchLoading }] = useLazyQuery<TaskSearchData>(
+    SEARCH_TASKS_QUERY,
+    { fetchPolicy: "network-only" },
+  )
   const [createTask] = useCreateTaskMutation()
   const [createTaskList] = useCreateTaskListMutation()
   const [updateTask] = useUpdateTaskMutation()
@@ -135,7 +127,8 @@ const MainBoard = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchOpen, setSearchOpen] = useState(false)
-  const [searchLimit, setSearchLimit] = useState(10)
+  const [searchResults, setSearchResults] = useState<TaskSearchTask[]>([])
+  const [searchTotal, setSearchTotal] = useState(0)
   const [searchIndex, setSearchIndex] = useState(0)
   const [listModalOpen, setListModalOpen] = useState(false)
   const [listName, setListName] = useState("")
@@ -150,6 +143,25 @@ const MainBoard = () => {
   const searchRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  const executeSearch = useCallback(
+    async (query: string, limit: number, offset: number, append: boolean) => {
+      const result = await runSearch({
+        variables: { query, limit, offset },
+      })
+      const payload = result.data?.searchTasks
+      if (!payload) {
+        if (!append) {
+          setSearchResults([])
+          setSearchTotal(0)
+        }
+        return
+      }
+      setSearchTotal(payload.totalCount)
+      setSearchResults((prev) => (append ? [...prev, ...payload.tasks] : payload.tasks))
+    },
+    [runSearch],
+  )
 
   useEffect(() => {
     if (data?.taskLists) {
@@ -180,12 +192,28 @@ const MainBoard = () => {
   }, [searchOpen])
 
   useEffect(() => {
-    setSearchLimit(10)
     setSearchIndex(0)
     if (!searchQuery.trim()) {
       setSearchOpen(false)
+      setSearchResults([])
+      setSearchTotal(0)
     }
   }, [searchQuery])
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim()
+    if (trimmed.length < 3) {
+      setSearchResults([])
+      setSearchTotal(0)
+      return
+    }
+
+    const handle = window.setTimeout(() => {
+      executeSearch(trimmed, SEARCH_PAGE_SIZE, 0, false)
+    }, 300)
+
+    return () => window.clearTimeout(handle)
+  }, [executeSearch, searchQuery])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -207,25 +235,31 @@ const MainBoard = () => {
 
   const taskLists = board.length ? board : data?.taskLists || []
   const backlogCount = taskLists.reduce((count, list) => count + list.tasks.length, 0)
-  const searchTasks = useMemo(() => {
-    const active = searchData?.activeTasks || []
-    const archived = searchData?.archivedTasks || []
-    return [...active, ...archived]
-  }, [searchData])
-  const normalizedQuery = searchQuery.trim().toLowerCase()
-  const filteredResults = useMemo(() => {
-    if (!normalizedQuery) return []
-    return searchTasks.filter((task) => task.title.toLowerCase().includes(normalizedQuery))
-  }, [normalizedQuery, searchTasks])
-  const visibleResults = filteredResults.slice(0, searchLimit)
-  const hasMoreResults = filteredResults.length > visibleResults.length
-  const totalResults = filteredResults.length
+  const trimmedQuery = searchQuery.trim()
+  const canSearch = trimmedQuery.length >= 3
+  const searchResultCount = searchResults.length
+  const visibleResults = searchResults
+  const hasMoreResults = searchResultCount < searchTotal
+  const totalResults = searchTotal
   const navigableCount = visibleResults.length + (hasMoreResults ? 1 : 0)
   const listNameById = useMemo(() => {
     const entries = taskLists.map((list) => [list.id, list.name] as const)
-    const searchEntries = searchTasks.map((task) => [task.taskListId, task.taskList.name] as const)
+    const searchEntries = searchResults.map(
+      (task) => [task.taskListId, task.taskList.name] as const,
+    )
     return new Map([...entries, ...searchEntries])
-  }, [searchTasks, taskLists])
+  }, [searchResults, taskLists])
+
+  const refreshSearch = useCallback(async () => {
+    if (!canSearch) return
+    const limit = Math.max(SEARCH_PAGE_SIZE, searchResultCount)
+    await executeSearch(trimmedQuery, limit, 0, false)
+  }, [canSearch, executeSearch, searchResultCount, trimmedQuery])
+
+  const handleLoadMoreResults = useCallback(async () => {
+    if (!canSearch || searchLoading) return
+    await executeSearch(trimmedQuery, SEARCH_PAGE_SIZE, searchResultCount, true)
+  }, [canSearch, executeSearch, searchLoading, searchResultCount, trimmedQuery])
 
   useEffect(() => {
     if (navigableCount === 0) {
@@ -253,7 +287,7 @@ const MainBoard = () => {
     taskLists.flatMap((list) => list.tasks).find((task) => task.id === taskId) || null
 
   const getTaskForModal = (taskId: string) =>
-    getTaskFromBoard(taskId) || searchTasks.find((task) => task.id === taskId) || null
+    getTaskFromBoard(taskId) || searchResults.find((task) => task.id === taskId) || null
 
   const getListName = (listId: string | null) =>
     listId ? listNameById.get(listId) || null : null
@@ -344,7 +378,7 @@ const MainBoard = () => {
       await createTask({ variables: { taskListId: activeListId, ...payload } })
     }
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
     closeModal()
   }
 
@@ -352,14 +386,14 @@ const MainBoard = () => {
     removeTaskFromBoard(taskId)
     await toggleTaskArchived({ variables: { id: taskId } })
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
   }
 
   const handleUnplan = async (taskId: string) => {
     updateTaskInBoard(taskId, (task) => ({ ...task, planned: null }))
     await setTaskPlanned({ variables: { id: taskId, planned: null } })
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
   }
 
   const handleDeleteList = async (listId: string) => {
@@ -375,7 +409,7 @@ const MainBoard = () => {
     }
     await deleteTaskList({ variables: { id: listId } })
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
   }
 
   const openCreateList = () => {
@@ -388,7 +422,7 @@ const MainBoard = () => {
     if (!trimmed) return
     await createTaskList({ variables: { name: trimmed } })
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
     closeListModal()
   }
 
@@ -438,7 +472,7 @@ const MainBoard = () => {
         updateTaskInBoard(activeData.taskId, (task) => ({ ...task, planned: overData.planned }))
         await setTaskPlanned({ variables: { id: activeData.taskId, planned: overData.planned } })
         await refetch()
-        await refetchSearch()
+        await refreshSearch()
         return
       }
 
@@ -448,7 +482,7 @@ const MainBoard = () => {
         updateTaskInBoard(activeData.taskId, (task) => ({ ...task, planned: overData.planned }))
         await setTaskPlanned({ variables: { id: activeData.taskId, planned: overData.planned } })
         await refetch()
-        await refetchSearch()
+        await refreshSearch()
         return
       }
 
@@ -478,7 +512,7 @@ const MainBoard = () => {
           variables: { id: activeData.taskId, taskListId: sourceListId, position: targetIndex },
         })
         await refetch()
-        await refetchSearch()
+        await refreshSearch()
         return
       }
 
@@ -487,7 +521,7 @@ const MainBoard = () => {
         variables: { id: activeData.taskId, taskListId: targetListId, position: targetIndex },
       })
       await refetch()
-      await refetchSearch()
+      await refreshSearch()
     } finally {
       setActiveDrag(null)
     }
@@ -504,7 +538,7 @@ const MainBoard = () => {
       subTasks: [...task.subTasks, newSubTask],
     }))
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
   }
 
   const handleToggleSubTask = async (id: string, completed: boolean) => {
@@ -517,7 +551,7 @@ const MainBoard = () => {
       subTasks: task.subTasks.map((sub) => (sub.id === id ? updated : sub)),
     }))
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
   }
 
   const handleSubTaskTitleChange = (id: string, title: string) => {
@@ -538,7 +572,7 @@ const MainBoard = () => {
       subTasks: task.subTasks.map((sub) => (sub.id === id ? updated : sub)),
     }))
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
   }
 
   const handleDeleteSubTask = async (id: string) => {
@@ -550,7 +584,7 @@ const MainBoard = () => {
       subTasks: task.subTasks.filter((sub) => sub.id !== id),
     }))
     await refetch()
-    await refetchSearch()
+    await refreshSearch()
   }
 
   const activeTask = activeTaskId ? getTaskForModal(activeTaskId) : null
@@ -608,7 +642,7 @@ const MainBoard = () => {
                   if (navigableCount === 0) return
                   event.preventDefault()
                   if (hasMoreResults && searchIndex === visibleResults.length) {
-                    setSearchLimit((prev) => prev + 10)
+                    handleLoadMoreResults()
                     return
                   }
                   const selected = visibleResults[searchIndex]
@@ -619,14 +653,20 @@ const MainBoard = () => {
                 }
               }}
             />
-            {searchOpen && searchQuery.trim() ? (
+            {searchOpen && trimmedQuery ? (
               <div className="absolute left-0 right-0 z-40 mt-2 rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-950">
                 <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   <span>Results</span>
-                  <span>{totalResults}</span>
+                  <span>{canSearch ? totalResults : 0}</span>
                 </div>
                 <div className="max-h-72 overflow-y-auto py-2">
-                  {visibleResults.length === 0 ? (
+                  {!canSearch ? (
+                    <div className="px-4 py-3 text-sm text-slate-500">
+                      Type at least 3 characters to search.
+                    </div>
+                  ) : searchLoading && visibleResults.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-slate-500">Searching...</div>
+                  ) : visibleResults.length === 0 ? (
                     <div className="px-4 py-3 text-sm text-slate-500">No matches found.</div>
                   ) : (
                     <div className="space-y-1 px-2">
@@ -672,9 +712,9 @@ const MainBoard = () => {
                               : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
                           }`}
                           onMouseEnter={() => setSearchIndex(visibleResults.length)}
-                          onClick={() => setSearchLimit((prev) => prev + 10)}
+                          onClick={handleLoadMoreResults}
                         >
-                          Load more
+                          {searchLoading ? "Loading..." : "Load more"}
                         </button>
                       ) : null}
                     </div>
