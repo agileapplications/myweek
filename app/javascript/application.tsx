@@ -1,5 +1,6 @@
 import { ApolloClient, ApolloProvider, HttpLink, InMemoryCache } from "@apollo/client"
 import { createRoot, type Root } from "react-dom/client"
+import { BrowserRouter, Route, Routes } from "react-router-dom"
 import MainBoard from "./containers/main"
 
 const client = new ApolloClient({
@@ -21,7 +22,12 @@ const mount = () => {
 
   reactRoot.render(
     <ApolloProvider client={client}>
-      <MainBoard />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<MainBoard />} />
+          <Route path="/todos/:taskId" element={<MainBoard />} />
+        </Routes>
+      </BrowserRouter>
     </ApolloProvider>
   )
 }

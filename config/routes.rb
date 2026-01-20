@@ -11,6 +11,7 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   root "tasks#index"
+  get "/todos/:taskId", to: "tasks#index"
 
   post "/graphql", to: "graphql#execute"
 

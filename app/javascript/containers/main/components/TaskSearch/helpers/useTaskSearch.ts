@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react"
+import type { KeyboardEvent, RefObject } from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   useSearchTasksLazyQuery,
@@ -22,7 +22,7 @@ type UseTaskSearchResult = {
   index: number
   hasMoreResults: boolean
   searchLoading: boolean
-  containerRef: React.RefObject<HTMLDivElement>
+  containerRef: RefObject<HTMLDivElement>
   setIndex: (index: number) => void
   handleInputChange: (value: string) => void
   handleInputFocus: () => void

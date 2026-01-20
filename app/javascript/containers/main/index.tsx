@@ -11,6 +11,7 @@ import {
 import { arrayMove } from "@dnd-kit/sortable"
 import type { MouseEvent } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import DarkModeButton from "../../components/DarkModeButton"
 import {
   useCreateSubTaskMutation,
@@ -52,6 +53,8 @@ const WEEK_DAYS: Day[] = [
 
 const MainBoard = () => {
   const { data, loading, error, refetch } = useMainBoardQuery()
+  const { taskId: routeTaskId } = useParams<{ taskId?: string }>()
+  const navigate = useNavigate()
   const [createTask] = useCreateTaskMutation()
   const [createTaskList] = useCreateTaskListMutation()
   const [updateTask] = useUpdateTaskMutation()
@@ -145,11 +148,16 @@ const MainBoard = () => {
     return byDay
   }, [taskLists])
 
-  const getTaskFromBoard = (taskId: string) =>
-    taskLists.flatMap((list) => list.tasks).find((task) => task.id === taskId) || null
+  const getTaskFromBoard = useCallback(
+    (taskId: string) =>
+      taskLists.flatMap((list) => list.tasks).find((task) => task.id === taskId) || null,
+    [taskLists],
+  )
 
-  const getTaskForModal = (taskId: string) =>
-    getTaskFromBoard(taskId) || searchCache.find((task) => task.id === taskId) || null
+  const getTaskForModal = useCallback(
+    (taskId: string) => getTaskFromBoard(taskId) || searchCache.find((task) => task.id === taskId) || null,
+    [getTaskFromBoard, searchCache],
+  )
 
   const getListName = (listId: string | null) =>
     listId ? listNameById.get(listId) || null : null
@@ -208,20 +216,43 @@ const MainBoard = () => {
     setModalOpen(true)
   }
 
-  const openEdit = (taskId: string) => {
-    const task = getTaskForModal(taskId)
-    if (!task) return
+  const openEditState = useCallback((task: TaskSearchTask) => {
     setActiveTaskId(task.id)
     setActiveListId(task.taskListId)
     setModalSubTasks([...task.subTasks])
     setModalOpen(true)
-  }
+  }, [])
 
-  const closeModal = () => {
+  const closeModalState = useCallback(() => {
     setModalOpen(false)
     setActiveTaskId(null)
     setActiveListId(null)
     setModalSubTasks([])
+  }, [])
+
+  useEffect(() => {
+    if (!routeTaskId) {
+      if (modalOpen) {
+        closeModalState()
+      }
+      return
+    }
+    if (routeTaskId === activeTaskId) return
+    const task = getTaskForModal(routeTaskId)
+    if (!task) return
+    openEditState(task)
+  }, [activeTaskId, closeModalState, getTaskForModal, modalOpen, openEditState, routeTaskId])
+
+  const openEdit = (taskId: string) => {
+    const task = getTaskForModal(taskId)
+    if (!task) return
+    navigate(`/todos/${taskId}`, { replace: true })
+    openEditState(task)
+  }
+
+  const closeModal = () => {
+    closeModalState()
+    navigate("/", { replace: true })
   }
 
   const closeListModal = () => {
