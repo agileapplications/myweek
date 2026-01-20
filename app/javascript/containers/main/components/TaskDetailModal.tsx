@@ -1,12 +1,12 @@
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import Modal from "../../../components/Modal"
-import type { SubTask, Task } from "../../../graphql/generated"
+import type { SubTask } from "../../../graphql/generated"
 import SubTasks from "./SubTasks"
 
 type TaskDetailModalProps = {
   open: boolean
-  task: Task | null
+  task: TaskDetail | null
   listName: string | null
   subTasks: SubTask[]
   onClose: () => void
@@ -16,6 +16,12 @@ type TaskDetailModalProps = {
   onSubTaskTitleChange: (id: string, title: string) => void
   onSubTaskTitleBlur: (id: string, title: string) => void
   onDeleteSubTask: (id: string) => void
+}
+
+type TaskDetail = {
+  title: string
+  description?: string | null
+  big: boolean
 }
 
 const TaskDetailModal = ({

@@ -9,8 +9,9 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
+import { gql, useQuery } from "@apollo/client"
 import type { MouseEvent } from "react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import DarkModeButton from "../../components/DarkModeButton"
 import {
   useCreateSubTaskMutation,
@@ -46,8 +47,75 @@ const WEEK_DAYS: Day[] = [
   { key: "next_week", label: "Next Week" },
 ]
 
+type TaskSearchTask = {
+  id: string
+  taskListId: string
+  title: string
+  description?: string | null
+  big: boolean
+  planned?: string | null
+  position: number
+  archivedAt?: any | null
+  subTasks: SubTask[]
+  taskList: {
+    id: string
+    name: string
+  }
+}
+
+type TaskSearchData = {
+  activeTasks: TaskSearchTask[]
+  archivedTasks: TaskSearchTask[]
+}
+
+const TASK_SEARCH_QUERY = gql`
+  query TaskSearch {
+    activeTasks: tasks(archived: false) {
+      id
+      taskListId
+      title
+      description
+      big
+      planned
+      position
+      archivedAt
+      subTasks {
+        id
+        taskId
+        title
+        completed
+      }
+      taskList {
+        id
+        name
+      }
+    }
+    archivedTasks: tasks(archived: true) {
+      id
+      taskListId
+      title
+      description
+      big
+      planned
+      position
+      archivedAt
+      subTasks {
+        id
+        taskId
+        title
+        completed
+      }
+      taskList {
+        id
+        name
+      }
+    }
+  }
+`
+
 const MainBoard = () => {
   const { data, loading, error, refetch } = useMainBoardQuery()
+  const { data: searchData, refetch: refetchSearch } = useQuery<TaskSearchData>(TASK_SEARCH_QUERY)
   const [createTask] = useCreateTaskMutation()
   const [createTaskList] = useCreateTaskListMutation()
   const [updateTask] = useUpdateTaskMutation()
@@ -65,6 +133,10 @@ const MainBoard = () => {
     null,
   )
   const [modalOpen, setModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchLimit, setSearchLimit] = useState(10)
+  const [searchIndex, setSearchIndex] = useState(0)
   const [listModalOpen, setListModalOpen] = useState(false)
   const [listName, setListName] = useState("")
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
@@ -74,6 +146,8 @@ const MainBoard = () => {
     taskId: string
     variant: "backlog" | "planned"
   } | null>(null)
+
+  const searchRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -95,6 +169,25 @@ const MainBoard = () => {
   }, [contextMenu])
 
   useEffect(() => {
+    if (!searchOpen) return
+    const handleClick = (event: globalThis.MouseEvent) => {
+      const target = event.target as Node | null
+      if (target && searchRef.current?.contains(target)) return
+      setSearchOpen(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [searchOpen])
+
+  useEffect(() => {
+    setSearchLimit(10)
+    setSearchIndex(0)
+    if (!searchQuery.trim()) {
+      setSearchOpen(false)
+    }
+  }, [searchQuery])
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (modalOpen) return
       if (!hoveredTaskId) return
@@ -114,6 +207,33 @@ const MainBoard = () => {
 
   const taskLists = board.length ? board : data?.taskLists || []
   const backlogCount = taskLists.reduce((count, list) => count + list.tasks.length, 0)
+  const searchTasks = useMemo(() => {
+    const active = searchData?.activeTasks || []
+    const archived = searchData?.archivedTasks || []
+    return [...active, ...archived]
+  }, [searchData])
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const filteredResults = useMemo(() => {
+    if (!normalizedQuery) return []
+    return searchTasks.filter((task) => task.title.toLowerCase().includes(normalizedQuery))
+  }, [normalizedQuery, searchTasks])
+  const visibleResults = filteredResults.slice(0, searchLimit)
+  const hasMoreResults = filteredResults.length > visibleResults.length
+  const totalResults = filteredResults.length
+  const navigableCount = visibleResults.length + (hasMoreResults ? 1 : 0)
+  const listNameById = useMemo(() => {
+    const entries = taskLists.map((list) => [list.id, list.name] as const)
+    const searchEntries = searchTasks.map((task) => [task.taskListId, task.taskList.name] as const)
+    return new Map([...entries, ...searchEntries])
+  }, [searchTasks, taskLists])
+
+  useEffect(() => {
+    if (navigableCount === 0) {
+      setSearchIndex(0)
+      return
+    }
+    setSearchIndex((prev) => Math.min(prev, navigableCount - 1))
+  }, [navigableCount])
 
   const plannedByDay = useMemo(() => {
     const byDay: Record<string, Task[]> = Object.fromEntries(
@@ -129,11 +249,14 @@ const MainBoard = () => {
     return byDay
   }, [taskLists])
 
-  const getTask = (taskId: string) =>
+  const getTaskFromBoard = (taskId: string) =>
     taskLists.flatMap((list) => list.tasks).find((task) => task.id === taskId) || null
 
+  const getTaskForModal = (taskId: string) =>
+    getTaskFromBoard(taskId) || searchTasks.find((task) => task.id === taskId) || null
+
   const getListName = (listId: string | null) =>
-    listId ? taskLists.find((list) => list.id === listId)?.name || null : null
+    listId ? listNameById.get(listId) || null : null
 
   const updateTaskInBoard = (taskId: string, updater: (task: Task) => Task) => {
     setBoard((prev) =>
@@ -190,7 +313,7 @@ const MainBoard = () => {
   }
 
   const openEdit = (taskId: string) => {
-    const task = getTask(taskId)
+    const task = getTaskForModal(taskId)
     if (!task) return
     setActiveTaskId(task.id)
     setActiveListId(task.taskListId)
@@ -221,6 +344,7 @@ const MainBoard = () => {
       await createTask({ variables: { taskListId: activeListId, ...payload } })
     }
     await refetch()
+    await refetchSearch()
     closeModal()
   }
 
@@ -228,12 +352,14 @@ const MainBoard = () => {
     removeTaskFromBoard(taskId)
     await toggleTaskArchived({ variables: { id: taskId } })
     await refetch()
+    await refetchSearch()
   }
 
   const handleUnplan = async (taskId: string) => {
     updateTaskInBoard(taskId, (task) => ({ ...task, planned: null }))
     await setTaskPlanned({ variables: { id: taskId, planned: null } })
     await refetch()
+    await refetchSearch()
   }
 
   const handleDeleteList = async (listId: string) => {
@@ -249,6 +375,7 @@ const MainBoard = () => {
     }
     await deleteTaskList({ variables: { id: listId } })
     await refetch()
+    await refetchSearch()
   }
 
   const openCreateList = () => {
@@ -261,6 +388,7 @@ const MainBoard = () => {
     if (!trimmed) return
     await createTaskList({ variables: { name: trimmed } })
     await refetch()
+    await refetchSearch()
     closeListModal()
   }
 
@@ -310,6 +438,7 @@ const MainBoard = () => {
         updateTaskInBoard(activeData.taskId, (task) => ({ ...task, planned: overData.planned }))
         await setTaskPlanned({ variables: { id: activeData.taskId, planned: overData.planned } })
         await refetch()
+        await refetchSearch()
         return
       }
 
@@ -319,6 +448,7 @@ const MainBoard = () => {
         updateTaskInBoard(activeData.taskId, (task) => ({ ...task, planned: overData.planned }))
         await setTaskPlanned({ variables: { id: activeData.taskId, planned: overData.planned } })
         await refetch()
+        await refetchSearch()
         return
       }
 
@@ -348,6 +478,7 @@ const MainBoard = () => {
           variables: { id: activeData.taskId, taskListId: sourceListId, position: targetIndex },
         })
         await refetch()
+        await refetchSearch()
         return
       }
 
@@ -356,6 +487,7 @@ const MainBoard = () => {
         variables: { id: activeData.taskId, taskListId: targetListId, position: targetIndex },
       })
       await refetch()
+      await refetchSearch()
     } finally {
       setActiveDrag(null)
     }
@@ -372,6 +504,7 @@ const MainBoard = () => {
       subTasks: [...task.subTasks, newSubTask],
     }))
     await refetch()
+    await refetchSearch()
   }
 
   const handleToggleSubTask = async (id: string, completed: boolean) => {
@@ -384,6 +517,7 @@ const MainBoard = () => {
       subTasks: task.subTasks.map((sub) => (sub.id === id ? updated : sub)),
     }))
     await refetch()
+    await refetchSearch()
   }
 
   const handleSubTaskTitleChange = (id: string, title: string) => {
@@ -404,6 +538,7 @@ const MainBoard = () => {
       subTasks: task.subTasks.map((sub) => (sub.id === id ? updated : sub)),
     }))
     await refetch()
+    await refetchSearch()
   }
 
   const handleDeleteSubTask = async (id: string) => {
@@ -415,10 +550,11 @@ const MainBoard = () => {
       subTasks: task.subTasks.filter((sub) => sub.id !== id),
     }))
     await refetch()
+    await refetchSearch()
   }
 
-  const activeTask = activeTaskId ? getTask(activeTaskId) : null
-  const activeDragTask = activeDrag ? getTask(activeDrag.taskId) : null
+  const activeTask = activeTaskId ? getTaskForModal(activeTaskId) : null
+  const activeDragTask = activeDrag ? getTaskFromBoard(activeDrag.taskId) : null
   const activeListName = getListName(activeListId)
 
   if (loading && taskLists.length === 0) {
@@ -432,9 +568,124 @@ const MainBoard = () => {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col">
       <div className="w-full px-6 py-10 flex-1 flex flex-col">
-        <header className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight">This Week</h1>
-          <DarkModeButton />
+        <header className="mb-6 flex items-center gap-4">
+          <h1 className="text-3xl font-semibold tracking-tight shrink-0">This Week</h1>
+          <div className="relative flex-1 max-w-xl mx-auto" ref={searchRef}>
+            <input
+              type="search"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-800"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value)
+                setSearchOpen(true)
+              }}
+              onFocus={() => {
+                if (searchQuery.trim()) {
+                  setSearchOpen(true)
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setSearchOpen(false)
+                  return
+                }
+                if (event.key === "ArrowDown") {
+                  event.preventDefault()
+                  if (!searchOpen) setSearchOpen(true)
+                  if (navigableCount === 0) return
+                  setSearchIndex((prev) => (prev + 1) % navigableCount)
+                  return
+                }
+                if (event.key === "ArrowUp") {
+                  event.preventDefault()
+                  if (!searchOpen) setSearchOpen(true)
+                  if (navigableCount === 0) return
+                  setSearchIndex((prev) => (prev - 1 + navigableCount) % navigableCount)
+                  return
+                }
+                if (event.key === "Enter") {
+                  if (navigableCount === 0) return
+                  event.preventDefault()
+                  if (hasMoreResults && searchIndex === visibleResults.length) {
+                    setSearchLimit((prev) => prev + 10)
+                    return
+                  }
+                  const selected = visibleResults[searchIndex]
+                  if (selected) {
+                    openEdit(selected.id)
+                    setSearchOpen(false)
+                  }
+                }
+              }}
+            />
+            {searchOpen && searchQuery.trim() ? (
+              <div className="absolute left-0 right-0 z-40 mt-2 rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-950">
+                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                  <span>Results</span>
+                  <span>{totalResults}</span>
+                </div>
+                <div className="max-h-72 overflow-y-auto py-2">
+                  {visibleResults.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-slate-500">No matches found.</div>
+                  ) : (
+                    <div className="space-y-1 px-2">
+                      {visibleResults.map((task, index) => {
+                        const isActive = index === searchIndex
+                        return (
+                          <button
+                            key={task.id}
+                            type="button"
+                            className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                              isActive
+                                ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100"
+                                : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900"
+                            }`}
+                            onMouseEnter={() => setSearchIndex(index)}
+                            onClick={() => {
+                              openEdit(task.id)
+                              setSearchOpen(false)
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium">{task.title}</span>
+                              <span
+                                className={`text-xs font-semibold ${
+                                  task.archivedAt ? "text-rose-500" : "text-emerald-600"
+                                }`}
+                              >
+                                {task.archivedAt ? "Archived" : "Active"}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              {task.taskList.name}
+                            </div>
+                          </button>
+                        )
+                      })}
+                      {hasMoreResults ? (
+                        <button
+                          type="button"
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm font-semibold ${
+                            searchIndex === visibleResults.length
+                              ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100"
+                              : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+                          }`}
+                          onMouseEnter={() => setSearchIndex(visibleResults.length)}
+                          onClick={() => setSearchLimit((prev) => prev + 10)}
+                        >
+                          Load more
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <div className="shrink-0">
+            <DarkModeButton />
+          </div>
         </header>
 
         <DndContext
