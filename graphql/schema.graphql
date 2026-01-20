@@ -40,4 +40,5 @@ type Mutation {
   createSubTask(taskId: ID!, title: String!): SubTask!
   updateSubTask(id: ID!, title: String, completed: Boolean): SubTask!
   deleteSubTask(id: ID!): ID!
+  deleteTaskList(id: ID!): ID!
 }

@@ -9,6 +9,7 @@ type BacklogViewProps = {
   onTaskContextMenu: (taskId: string, event: MouseEvent) => void
   onTaskHover: (taskId: string | null) => void
   onCreateTask: (listId: string) => void
+  onDeleteList: (listId: string) => void
 }
 
 const BacklogView = ({
@@ -18,6 +19,7 @@ const BacklogView = ({
   onTaskContextMenu,
   onTaskHover,
   onCreateTask,
+  onDeleteList,
 }: BacklogViewProps) => {
   return (
     <details className="group mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -41,6 +43,7 @@ const BacklogView = ({
                   onTaskContextMenu={onTaskContextMenu}
                   onTaskHover={onTaskHover}
                   onCreateTask={onCreateTask}
+                  onDeleteList={onDeleteList}
                 />
               ))}
             </div>

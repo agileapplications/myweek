@@ -44,6 +44,10 @@ module Types
       argument :id, ID, required: true
     end
 
+    field :delete_task_list, ID, null: false do
+      argument :id, ID, required: true
+    end
+
     def create_task(task_list_id:, title:, description: nil, big: false)
       list = TaskList.find(task_list_id)
       position = Task.where(task_list_id: list.id, archived_at: nil).count
@@ -129,6 +133,13 @@ module Types
     def delete_sub_task(id:)
       sub_task = SubTask.find(id)
       sub_task.destroy
+      id
+    end
+
+    def delete_task_list(id:)
+      list = TaskList.find(id)
+      Task.where(task_list_id: list.id).find_each(&:destroy)
+      list.destroy
       id
     end
   end

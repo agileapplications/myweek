@@ -15,6 +15,7 @@ import DarkModeButton from "../../components/DarkModeButton"
 import {
   useCreateSubTaskMutation,
   useCreateTaskMutation,
+  useDeleteTaskListMutation,
   useDeleteSubTaskMutation,
   useMainBoardQuery,
   useMoveTaskMutation,
@@ -53,6 +54,7 @@ const MainBoard = () => {
   const [createSubTask] = useCreateSubTaskMutation()
   const [updateSubTask] = useUpdateSubTaskMutation()
   const [deleteSubTask] = useDeleteSubTaskMutation()
+  const [deleteTaskList] = useDeleteTaskListMutation()
 
   const [board, setBoard] = useState<TaskList[]>([])
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
@@ -143,6 +145,10 @@ const MainBoard = () => {
     )
   }
 
+  const removeListFromBoard = (listId: string) => {
+    setBoard((prev) => prev.filter((list) => list.id !== listId))
+  }
+
   const moveTaskInBoard = (taskId: string, targetListId: string, targetIndex: number) => {
     setBoard((prev) => {
       let movingTask: Task | null = null
@@ -217,6 +223,21 @@ const MainBoard = () => {
   const handleUnplan = async (taskId: string) => {
     updateTaskInBoard(taskId, (task) => ({ ...task, planned: null }))
     await setTaskPlanned({ variables: { id: taskId, planned: null } })
+    await refetch()
+  }
+
+  const handleDeleteList = async (listId: string) => {
+    const list = taskLists.find((item) => item.id === listId)
+    const name = list?.name || "this list"
+    const taskCount = list?.tasks.length ?? 0
+    const confirmMessage = `Delete ${name} and ${taskCount === 1 ? "its 1 task" : `its ${taskCount} tasks`} (including all subtasks)? This cannot be undone.`
+    if (!window.confirm(confirmMessage)) return
+
+    removeListFromBoard(listId)
+    if (activeListId === listId) {
+      closeModal()
+    }
+    await deleteTaskList({ variables: { id: listId } })
     await refetch()
   }
 
@@ -415,6 +436,7 @@ const MainBoard = () => {
             onTaskContextMenu={handleContextMenu}
             onTaskHover={setHoveredTaskId}
             onCreateTask={openNew}
+            onDeleteList={handleDeleteList}
           />
           <DragOverlay>
             {activeDrag && activeDragTask ? (
